@@ -95,12 +95,19 @@ impl<'a> Lexer<'a> {
         }
 
         let start = self.position;
-        while self.peek_char().is_ascii_alphabetic() {
+        while self.peek_char().is_alphanumeric() {
             self.read_char();
         }
         if let Ok(token_text) = str::from_utf8(self.text_range(start)) {
             match token_text {
                 "let" => return Some(self.text_token(start, Kind::Let)),
+                "int1" => return Some(self.text_token(start, Kind::Int1)),
+                "int2" => return Some(self.text_token(start, Kind::Int2)),
+                "int4" => return Some(self.text_token(start, Kind::Int4)),
+                "int8" => return Some(self.text_token(start, Kind::Int8)),
+                "int16" => return Some(self.text_token(start, Kind::Int16)),
+                "int32" => return Some(self.text_token(start, Kind::Int32)),
+                "int64" => return Some(self.text_token(start, Kind::Int64)),
                 _ => {
                     self.reset(start);
                     return None;
@@ -113,6 +120,9 @@ impl<'a> Lexer<'a> {
     pub fn read_symbol(&mut self) -> Option<Token<'a>> {
         if self.char() == '=' {
             return Some(self.char_token(Kind::EqualSign));
+        }
+        else if self.char() == ':' {
+            return Some(self.char_token(Kind::Colon));
         }
         return None;
     }
@@ -223,11 +233,102 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: let_statement_with_assignment,
+        name: let_statement_with_assignment_to_integer,
         input: "let x = 5",
         expected_tokens: &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    }   
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_integer_i1,
+        input: "let x: int1 = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int1", Kind::Int1),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_integer_i2,
+        input: "let x: int2 = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int2", Kind::Int2),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_integer_i4,
+        input: "let x: int4 = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int4", Kind::Int4),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_integer_i8,
+        input: "let x: int8 = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int8", Kind::Int8),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    } 
+    
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_integer_i16,
+        input: "let x: int16 = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int16", Kind::Int16),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_integer_i32,
+        input: "let x: int32 = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int32", Kind::Int32),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_integer_i64,
+        input: "let x: int64 = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int64", Kind::Int64),
             ("=", Kind::EqualSign),
             ("5", Kind::Integer),
         ],

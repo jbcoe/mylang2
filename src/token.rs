@@ -1,13 +1,20 @@
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Kind {
+    Colon,
+    EndOfFile,
+    EqualSign,
     Identifier,
+    Int1,
+    Int16,
+    Int2,
+    Int32,
+    Int4,
+    Int64,
+    Int8,
     Integer,
     Let,
-    SemiColon,
-    EqualSign,
-    Whitespace,
-    EndOfFile,
     Unknown,
+    Whitespace,
 }
 
 #[derive(Debug, Clone, Copy)]
