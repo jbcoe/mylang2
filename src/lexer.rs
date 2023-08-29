@@ -9,7 +9,7 @@ pub struct Lexer<'a> {
     byte: u8,
 }
 impl<'a> Lexer<'a> {
-    #[must_use]
+    #[must_use="Creates a Lexer, has no side effects"]
     pub fn new(input: &'a str) -> Lexer {
         let mut lexer = Lexer {
             input: input.as_bytes(),
@@ -21,10 +21,12 @@ impl<'a> Lexer<'a> {
         lexer
     }
 
+    // Returns the current character.
     fn char(&self) -> char {
         char::from(self.byte)
     }
 
+    // Reads the next character advancing the lexer.
     fn read_char(&mut self) {
         self.byte = match self.input.get(self.read_position) {
             None => 0,
@@ -36,6 +38,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // Resets the lexer to a previous position.
     fn reset(&mut self, position: usize) {
         self.position = position;
         self.read_position = position + 1;
@@ -45,6 +48,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // Returns the next character without advancing the lexer.
     fn peek_char(&self) -> char {
         match self.input.get(self.read_position) {
             None => '\0',
@@ -52,18 +56,22 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // Returns the text between the start and the read position.
     fn text_range(&self, start: usize) -> &'a [u8] {
         &self.input[start..self.read_position]
     }
 
+    // Returns a token for a single character.
     fn char_token(&self, kind: Kind) -> Token<'a> {
         self.text_token(self.position, kind)
     }
 
+    // Returns a token for a range of text.
     fn text_token(&self, start: usize, kind: Kind) -> Token<'a> {
         Token::new(self.text_range(start), start, kind)
     }
 
+    // Attempts to read a whitespace token.
     fn read_whitespace(&mut self) -> Option<Token<'a>> {
         if !self.char().is_whitespace() {
             return None;
@@ -77,6 +85,7 @@ impl<'a> Lexer<'a> {
         Some(self.text_token(start, Kind::Whitespace))
     }
 
+    // Attempts to read an identifier token, potentially advancing the lexer.
     fn read_identifier(&mut self) -> Option<Token<'a>> {
         if !self.char().is_ascii_alphabetic() {
             return None;
@@ -89,6 +98,7 @@ impl<'a> Lexer<'a> {
         Some(self.text_token(start, Kind::Identifier))
     }
 
+    // Attempts to read a keyword token, potentially advancing the lexer.
     fn read_keyword(&mut self) -> Option<Token<'a>> {
         if !self.char().is_ascii_alphabetic() {
             return None;
@@ -117,6 +127,7 @@ impl<'a> Lexer<'a> {
         None
     }
 
+    // Attempts to read a symbol token, potentially advancing the lexer.
     pub fn read_symbol(&mut self) -> Option<Token<'a>> {
         if self.char() == '=' {
             return Some(self.char_token(Kind::EqualSign));
@@ -127,6 +138,7 @@ impl<'a> Lexer<'a> {
         return None;
     }
 
+    // Attempts to read an integer token, potentially advancing the lexer.
     pub fn read_integer(&mut self) -> Option<Token<'a>> {
         if !self.char().is_ascii_digit() {
             return None;
@@ -138,6 +150,7 @@ impl<'a> Lexer<'a> {
         return Some(self.text_token(start, Kind::Integer));
     }
 
+    // Reads the next token unconditionally advancing the lexer.
     pub fn read_token(&mut self) -> Token<'a> {
         if self.char() == '\0' {
             return Token::end_of_file(self.position);
@@ -241,7 +254,7 @@ mod tests {
             ("=", Kind::EqualSign),
             ("5", Kind::Integer),
         ],
-    }   
+    }    
 
     lexer_test_case! {
         name: let_statement_with_assignment_to_integer_i1,
