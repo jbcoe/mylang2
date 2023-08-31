@@ -134,6 +134,18 @@ impl<'a> Lexer<'a> {
             Some(self.char_token(Kind::Divide))
         } else if self.char() == '*' {
             Some(self.char_token(Kind::Star))
+        } else if self.char() == '(' {
+            Some(self.char_token(Kind::LeftParenthesis))
+        } else if self.char() == ')' {
+            Some(self.char_token(Kind::RightParenthesis))
+        } else if self.char() == '[' {
+            Some(self.char_token(Kind::LeftSquareBracket))
+        } else if self.char() == ']' {
+            Some(self.char_token(Kind::RightSquareBracket))
+        } else if self.char() == '{' {
+            Some(self.char_token(Kind::LeftBrace))
+        } else if self.char() == '}' {
+            Some(self.char_token(Kind::RightBrace))
         } else {
             None
         };
@@ -451,6 +463,19 @@ mod tests {
             ("4", Kind::Integer),
             ("*", Kind::Star),
             ("2", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: braces_brackets_and_parens,
+        input: "()[]{}",
+        expected_tokens: &[
+            ("(", Kind::LeftParenthesis),
+            (")", Kind::RightParenthesis),
+            ("[", Kind::LeftSquareBracket),
+            ("]", Kind::RightSquareBracket),
+            ("{", Kind::LeftBrace),
+            ("}", Kind::RightBrace),
         ],
     }
 }
