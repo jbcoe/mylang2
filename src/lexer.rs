@@ -166,7 +166,7 @@ impl<'a> Lexer<'a> {
         while self.peek_char().is_ascii_digit() {
             self.step();
         }
-        return Some(self.text_token(start, Kind::Integer));
+        return Some(self.text_token(start, Kind::IntegerLiteral));
     }
 
     // Attempts to read a string token, potentially advancing the lexer.
@@ -190,11 +190,31 @@ impl<'a> Lexer<'a> {
         Some(token)
     }
 
+    fn maybe_read_comment(&mut self) -> Option<Token<'a>> {
+        if self.char() != '#' {
+            return None;
+        }
+        let start = self.position;
+        while self.peek_char() != '\n' {
+            self.step();
+            // Returns `None` if the comment does not end with a newline.
+            if self.peek_char() == '\0' {
+                self.reset(start);
+                return None;
+            }
+        }
+        let token = Some(self.text_token(start, Kind::Comment));
+        self.step(); // consume the newline.
+        token
+    }
+
     // Reads the next token unconditionally advancing the lexer.
     fn read_token(&mut self) -> Token<'a> {
         if self.char() == '\0' {
             return Token::end_of_file(self.position);
         } else if let Some(t) = self.maybe_read_whitespace() {
+            return t;
+        } else if let Some(t) = self.maybe_read_comment() {
             return t;
         } else if let Some(t) = self.maybe_read_symbol() {
             return t;
@@ -298,7 +318,7 @@ mod tests {
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -310,7 +330,7 @@ mod tests {
             ("mut", Kind::Mut),
             ("x", Kind::Identifier),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -323,7 +343,7 @@ mod tests {
             (":", Kind::Colon),
             ("int1", Kind::Int1),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -336,7 +356,7 @@ mod tests {
             (":", Kind::Colon),
             ("int2", Kind::Int2),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -349,7 +369,7 @@ mod tests {
             (":", Kind::Colon),
             ("int4", Kind::Int4),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -362,7 +382,7 @@ mod tests {
             (":", Kind::Colon),
             ("int8", Kind::Int8),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -375,7 +395,7 @@ mod tests {
             (":", Kind::Colon),
             ("int16", Kind::Int16),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -388,7 +408,7 @@ mod tests {
             (":", Kind::Colon),
             ("int32", Kind::Int32),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -401,7 +421,7 @@ mod tests {
             (":", Kind::Colon),
             ("int64", Kind::Int64),
             ("=", Kind::EqualSign),
-            ("5", Kind::Integer),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -436,9 +456,9 @@ mod tests {
         name: plus,
         input: "4 + 1",
         expected_tokens: &[
-            ("4", Kind::Integer),
+            ("4", Kind::IntegerLiteral),
             ("+", Kind::Plus),
-            ("1", Kind::Integer),
+            ("1", Kind::IntegerLiteral),
         ],
     }
 
@@ -446,9 +466,9 @@ mod tests {
         name: minus,
         input: "4 - 1",
         expected_tokens: &[
-            ("4", Kind::Integer),
+            ("4", Kind::IntegerLiteral),
             ("-", Kind::Minus),
-            ("1", Kind::Integer),
+            ("1", Kind::IntegerLiteral),
         ],
     }
 
@@ -456,9 +476,9 @@ mod tests {
         name: divide,
         input: "4 / 2",
         expected_tokens: &[
-            ("4", Kind::Integer),
+            ("4", Kind::IntegerLiteral),
             ("/", Kind::Divide),
-            ("2", Kind::Integer),
+            ("2", Kind::IntegerLiteral),
         ],
     }
 
@@ -466,9 +486,9 @@ mod tests {
         name: multiply,
         input: "4 * 2",
         expected_tokens: &[
-            ("4", Kind::Integer),
+            ("4", Kind::IntegerLiteral),
             ("*", Kind::Star),
-            ("2", Kind::Integer),
+            ("2", Kind::IntegerLiteral),
         ],
     }
 
@@ -498,6 +518,86 @@ mod tests {
             (")", Kind::RightParenthesis),
             ("->", Kind::Arrow),
             ("int32", Kind::Int32),
+        ],
+    }
+
+    lexer_test_case! {
+        name: float16,
+        input: "let x:float16 = 0",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("float16", Kind::Float16),
+            ("=", Kind::EqualSign),
+            ("0", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        name: bfloat16,
+        input: "let x:bfloat16 = 0",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("bfloat16", Kind::BFloat16),
+            ("=", Kind::EqualSign),
+            ("0", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        name: float32,
+        input: "let x:float32 = 0",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("float32", Kind::Float32),
+            ("=", Kind::EqualSign),
+            ("0", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        name: float64,
+        input: "let x:float64 = 0",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("float64", Kind::Float64),
+            ("=", Kind::EqualSign),
+            ("0", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        name: comment,
+        input: "let x:float64 = 0 # this is a comment\n",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("float64", Kind::Float64),
+            ("=", Kind::EqualSign),
+            ("0", Kind::IntegerLiteral),
+            ("# this is a comment", Kind::Comment),
+        ],
+    }
+
+    lexer_test_case! {
+        name: comment_no_newline,
+        input: "let x:float64 = 0 # this is not a comment",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("float64", Kind::Float64),
+            ("=", Kind::EqualSign),
+            ("0", Kind::IntegerLiteral),
+            ("# this is not a comment", Kind::Unknown),
         ],
     }
 }
