@@ -1,8 +1,10 @@
+use crate::token::Keywords;
 use crate::token::Kind;
 use crate::token::Token;
 use std::str;
 
 pub struct Lexer<'a> {
+    keywords: Keywords,
     input: &'a [u8],
     position: usize,
     read_position: usize,
@@ -12,6 +14,7 @@ impl<'a> Lexer<'a> {
     #[must_use = "Creates a Lexer, has no side effects"]
     pub fn new(input: &'a str) -> Lexer {
         let mut lexer = Lexer {
+            keywords: Keywords::new(),
             input: input.as_bytes(),
             position: 0,
             read_position: 0,
@@ -109,15 +112,8 @@ impl<'a> Lexer<'a> {
             self.step();
         }
         if let Ok(token_text) = str::from_utf8(self.text_range(start)) {
-            match token_text {
-                "let" => return Some(self.text_token(start, Kind::Let)),
-                "int1" => return Some(self.text_token(start, Kind::Int1)),
-                "int2" => return Some(self.text_token(start, Kind::Int2)),
-                "int4" => return Some(self.text_token(start, Kind::Int4)),
-                "int8" => return Some(self.text_token(start, Kind::Int8)),
-                "int16" => return Some(self.text_token(start, Kind::Int16)),
-                "int32" => return Some(self.text_token(start, Kind::Int32)),
-                "int64" => return Some(self.text_token(start, Kind::Int64)),
+            match self.keywords.get(token_text) {
+                Some(kind) => return Some(self.text_token(start, kind)),
                 _ => {
                     self.reset(start);
                     return None;
@@ -277,6 +273,18 @@ mod tests {
         input: "let x = 5",
         expected_tokens: &[
             ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            ("=", Kind::EqualSign),
+            ("5", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_mutable_integer,
+        input: "let mut x = 5",
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("mut", Kind::Mut),
             ("x", Kind::Identifier),
             ("=", Kind::EqualSign),
             ("5", Kind::Integer),
