@@ -13,6 +13,7 @@ pub enum Kind {
     Int8,
     Integer,
     Let,
+    String,
     Unknown,
     Whitespace,
 }

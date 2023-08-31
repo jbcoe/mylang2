@@ -9,7 +9,7 @@ pub struct Lexer<'a> {
     byte: u8,
 }
 impl<'a> Lexer<'a> {
-    #[must_use="Creates a Lexer, has no side effects"]
+    #[must_use = "Creates a Lexer, has no side effects"]
     pub fn new(input: &'a str) -> Lexer {
         let mut lexer = Lexer {
             input: input.as_bytes(),
@@ -72,7 +72,7 @@ impl<'a> Lexer<'a> {
     }
 
     // Attempts to read a whitespace token.
-    fn read_whitespace(&mut self) -> Option<Token<'a>> {
+    fn maybe_read_whitespace(&mut self) -> Option<Token<'a>> {
         if !self.char().is_whitespace() {
             return None;
         }
@@ -86,7 +86,7 @@ impl<'a> Lexer<'a> {
     }
 
     // Attempts to read an identifier token, potentially advancing the lexer.
-    fn read_identifier(&mut self) -> Option<Token<'a>> {
+    fn maybe_read_identifier(&mut self) -> Option<Token<'a>> {
         if !self.char().is_ascii_alphabetic() {
             return None;
         }
@@ -99,7 +99,7 @@ impl<'a> Lexer<'a> {
     }
 
     // Attempts to read a keyword token, potentially advancing the lexer.
-    fn read_keyword(&mut self) -> Option<Token<'a>> {
+    fn maybe_read_keyword(&mut self) -> Option<Token<'a>> {
         if !self.char().is_ascii_alphabetic() {
             return None;
         }
@@ -128,18 +128,17 @@ impl<'a> Lexer<'a> {
     }
 
     // Attempts to read a symbol token, potentially advancing the lexer.
-    pub fn read_symbol(&mut self) -> Option<Token<'a>> {
+    pub fn maybe_read_symbol(&mut self) -> Option<Token<'a>> {
         if self.char() == '=' {
             return Some(self.char_token(Kind::EqualSign));
-        }
-        else if self.char() == ':' {
+        } else if self.char() == ':' {
             return Some(self.char_token(Kind::Colon));
         }
         return None;
     }
 
     // Attempts to read an integer token, potentially advancing the lexer.
-    pub fn read_integer(&mut self) -> Option<Token<'a>> {
+    pub fn maybe_read_integer(&mut self) -> Option<Token<'a>> {
         if !self.char().is_ascii_digit() {
             return None;
         }
@@ -150,22 +149,49 @@ impl<'a> Lexer<'a> {
         return Some(self.text_token(start, Kind::Integer));
     }
 
+    // Attempts to read a string token, potentially advancing the lexer.
+    pub fn maybe_read_string(&mut self) -> Option<Token<'a>> {
+        if self.char() != '"' {
+            return None;
+        }
+        let start = self.position;
+        self.read_char(); // consume the opening quote.
+        while self.peek_char() != '"' {
+            // Returns None if the string is incomplete.
+            if self.peek_char() == '\0' {
+                self.reset(start);
+                return None;
+            }
+            self.read_char();
+        }
+
+        let token = self.text_token(start + 1, Kind::String);
+        self.read_char(); // consume the closing quote.
+        return Some(token);
+    }
+
     // Reads the next token unconditionally advancing the lexer.
     pub fn read_token(&mut self) -> Token<'a> {
         if self.char() == '\0' {
             return Token::end_of_file(self.position);
-        } else if let Some(t) = self.read_whitespace() {
+        } else if let Some(t) = self.maybe_read_whitespace() {
             return t;
-        } else if let Some(t) = self.read_symbol() {
+        } else if let Some(t) = self.maybe_read_symbol() {
             return t;
-        } else if let Some(t) = self.read_keyword() {
+        } else if let Some(t) = self.maybe_read_keyword() {
             return t;
-        } else if let Some(t) = self.read_integer() {
+        } else if let Some(t) = self.maybe_read_string() {
             return t;
-        } else if let Some(t) = self.read_identifier() {
+        } else if let Some(t) = self.maybe_read_integer() {
+            return t;
+        } else if let Some(t) = self.maybe_read_identifier() {
             return t;
         } else {
-            return self.char_token(Kind::Unknown);
+            let start = self.position;
+            while self.char() != '\0' {
+                self.read_char();
+            }
+            return self.text_token(start, Kind::Unknown);
         }
     }
 
@@ -254,7 +280,7 @@ mod tests {
             ("=", Kind::EqualSign),
             ("5", Kind::Integer),
         ],
-    }    
+    }
 
     lexer_test_case! {
         name: let_statement_with_assignment_to_integer_i1,
@@ -306,8 +332,8 @@ mod tests {
             ("=", Kind::EqualSign),
             ("5", Kind::Integer),
         ],
-    } 
-    
+    }
+
     lexer_test_case! {
         name: let_statement_with_assignment_to_integer_i16,
         input: "let x: int16 = 5",
@@ -344,6 +370,27 @@ mod tests {
             ("int64", Kind::Int64),
             ("=", Kind::EqualSign),
             ("5", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: let_statement_with_assignment_to_string,
+        input: r#"let x: int64 = "five""#,
+        expected_tokens: &[
+            ("let", Kind::Let),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int64", Kind::Int64),
+            ("=", Kind::EqualSign),
+            ("five", Kind::String),
+        ],
+    }
+
+    lexer_test_case! {
+        name: incomplete_string,
+        input: r#""oops"#,
+        expected_tokens: &[
+            (r#""oops"#, Kind::Unknown),
         ],
     }
 }
