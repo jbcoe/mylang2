@@ -21,11 +21,20 @@ pub enum Kind {
     Whitespace,
 }
 
-#[derive(Debug, Clone, Copy)]
 pub struct Token<'a> {
     text: &'a [u8],
     offset: usize,
     kind: Kind,
+}
+
+impl core::fmt::Debug for Token<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Token")
+            .field("text", &self.text())
+            .field("offset", &self.offset())
+            .field("kind", &self.kind())
+            .finish()
+    }
 }
 
 impl<'a> Token<'a> {
