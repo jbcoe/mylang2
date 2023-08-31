@@ -240,6 +240,33 @@ impl<'a> Lexer<'a> {
         self.step();
         token
     }
+
+    // Returns the 1-based row number of the given Token.
+    pub fn get_row(&self, token: &Token) -> usize {
+        assert!(token.kind() != Kind::EndOfFile);
+        assert!(token.offset() <= self.input.len());
+        let mut row = 1;
+        for c in self.input[..token.offset()].iter() {
+            if *c == b'\n' {
+                row += 1;
+            }
+        }
+        row
+    }
+
+    // Returns the 1-based column number of the given token.
+    pub fn get_column(&self, token: &Token) -> usize {
+        assert!(token.kind() != Kind::EndOfFile);
+        assert!(token.offset() <= self.input.len());
+        let mut column = 1;
+        for c in self.input[..token.offset()].iter().rev() {
+            if *c == b'\n' {
+                break;
+            }
+            column += 1;
+        }
+        column
+    }
 }
 
 #[cfg(test)]
@@ -599,5 +626,64 @@ mod tests {
             ("0", Kind::IntegerLiteral),
             ("# this is not a comment", Kind::Unknown),
         ],
+    }
+
+    #[test]
+    fn test_row_and_column() {
+        let input_source = "\
+let x = 5
+let y = 7
+
+let z = x + y
+";
+        let mut lexer = Lexer::new(input_source);
+        let mut tokens = Vec::<Token>::new();
+        let mut t = lexer.next_token();
+        while t.kind() != Kind::EndOfFile {
+            tokens.push(t);
+            t = lexer.next_token();
+        }
+
+        let expected_tokens = &[
+            // (text, kind, row, column)
+            // Line 1
+            ("let", Kind::Let, 1, 1),
+            (" ", Kind::Whitespace, 1, 4),
+            ("x", Kind::Identifier, 1, 5),
+            (" ", Kind::Whitespace, 1, 6),
+            ("=", Kind::EqualSign, 1, 7),
+            (" ", Kind::Whitespace, 1, 8),
+            ("5", Kind::IntegerLiteral, 1, 9),
+            ("\n", Kind::Whitespace, 1, 10),
+            // Line 2
+            ("let", Kind::Let, 2, 1),
+            (" ", Kind::Whitespace, 2, 4),
+            ("y", Kind::Identifier, 2, 5),
+            (" ", Kind::Whitespace, 2, 6),
+            ("=", Kind::EqualSign, 2, 7),
+            (" ", Kind::Whitespace, 2, 8),
+            ("7", Kind::IntegerLiteral, 2, 9),
+            ("\n\n", Kind::Whitespace, 2, 10),
+            // Line 4
+            // Line 3
+            ("let", Kind::Let, 4, 1),
+            (" ", Kind::Whitespace, 4, 4),
+            ("z", Kind::Identifier, 4, 5),
+            (" ", Kind::Whitespace, 4, 6),
+            ("=", Kind::EqualSign, 4, 7),
+            (" ", Kind::Whitespace, 4, 8),
+            ("x", Kind::Identifier, 4, 9),
+            (" ", Kind::Whitespace, 4, 10),
+            ("+", Kind::Plus, 4, 11),
+            (" ", Kind::Whitespace, 4, 12),
+            ("y", Kind::Identifier, 4, 13),
+            ("\n", Kind::Whitespace, 4, 14),
+        ];
+        for (i, expected_token) in expected_tokens.iter().enumerate() {
+            assert_eq!(tokens[i].text(), expected_token.0);
+            assert_eq!(tokens[i].kind(), expected_token.1);
+            assert_eq!(lexer.get_row(&tokens[i]), expected_token.2);
+            assert_eq!(lexer.get_column(&tokens[i]), expected_token.3);
+        }
     }
 }
