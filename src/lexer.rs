@@ -17,7 +17,7 @@ impl<'a> Lexer<'a> {
             read_position: 0,
             byte: 0,
         };
-        lexer.read_char();
+        lexer.step();
         lexer
     }
 
@@ -26,8 +26,8 @@ impl<'a> Lexer<'a> {
         char::from(self.byte)
     }
 
-    // Reads the next character advancing the lexer.
-    fn read_char(&mut self) {
+    // Advances the lexer.
+    fn step(&mut self) {
         self.byte = match self.input.get(self.read_position) {
             None => 0,
             Some(b) => {
@@ -79,7 +79,7 @@ impl<'a> Lexer<'a> {
 
         let start = self.position;
         while self.peek_char().is_whitespace() {
-            self.read_char();
+            self.step();
         }
 
         Some(self.text_token(start, Kind::Whitespace))
@@ -93,7 +93,7 @@ impl<'a> Lexer<'a> {
 
         let start = self.position;
         while self.peek_char().is_ascii_alphanumeric() || self.peek_char() == '_' {
-            self.read_char();
+            self.step();
         }
         Some(self.text_token(start, Kind::Identifier))
     }
@@ -106,7 +106,7 @@ impl<'a> Lexer<'a> {
 
         let start = self.position;
         while self.peek_char().is_alphanumeric() {
-            self.read_char();
+            self.step();
         }
         if let Ok(token_text) = str::from_utf8(self.text_range(start)) {
             match token_text {
@@ -144,7 +144,7 @@ impl<'a> Lexer<'a> {
         }
         let start = self.position;
         while self.peek_char().is_ascii_digit() {
-            self.read_char();
+            self.step();
         }
         return Some(self.text_token(start, Kind::Integer));
     }
@@ -155,18 +155,18 @@ impl<'a> Lexer<'a> {
             return None;
         }
         let start = self.position;
-        self.read_char(); // consume the opening quote.
+        self.step(); // consume the opening quote.
         while self.peek_char() != '"' {
             // Returns None if the string is incomplete.
             if self.peek_char() == '\0' {
                 self.reset(start);
                 return None;
             }
-            self.read_char();
+            self.step();
         }
 
         let token = self.text_token(start + 1, Kind::String);
-        self.read_char(); // consume the closing quote.
+        self.step(); // consume the closing quote.
         return Some(token);
     }
 
@@ -189,15 +189,15 @@ impl<'a> Lexer<'a> {
         } else {
             let start = self.position;
             while self.char() != '\0' {
-                self.read_char();
+                self.step();
             }
             return self.text_token(start, Kind::Unknown);
         }
     }
 
     pub fn next_token(&mut self) -> Token<'a> {
-        let token = self.read_token();
-        self.read_char();
+        let token = self.read_token();        
+        self.step();
         token
     }
 }
@@ -392,5 +392,10 @@ mod tests {
         expected_tokens: &[
             (r#""oops"#, Kind::Unknown),
         ],
+    }
+    lexer_test_case! {
+        name: empty_input,
+        input: "",
+        expected_tokens: Vec::<(String, Kind)>::new(),
     }
 }
