@@ -1,10 +1,8 @@
-use crate::token::Keywords;
 use crate::token::Kind;
 use crate::token::Token;
 use std::str;
 
 pub struct Lexer<'a> {
-    keywords: Keywords,
     input: &'a [u8],
     position: usize,
     read_position: usize,
@@ -14,7 +12,6 @@ impl<'a> Lexer<'a> {
     #[must_use = "Creates a Lexer, has no side effects"]
     pub fn new(input: &'a str) -> Lexer {
         let mut lexer = Lexer {
-            keywords: Keywords::new(),
             input: input.as_bytes(),
             position: 0,
             read_position: 0,
@@ -112,8 +109,8 @@ impl<'a> Lexer<'a> {
             self.step();
         }
         if let Ok(token_text) = str::from_utf8(self.text_range(start)) {
-            match self.keywords.get(token_text) {
-                Some(kind) => return Some(self.text_token(start, kind)),
+            match crate::token::KEYWORDS.get(token_text) {
+                Some(kind) => return Some(self.text_token(start, *kind)),
                 _ => {
                     self.reset(start);
                     return None;
