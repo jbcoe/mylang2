@@ -1,3 +1,5 @@
+use std::str;
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Kind {
     Colon,
@@ -34,8 +36,8 @@ impl<'a> Token<'a> {
         self.kind
     }
 
-    pub fn text(&self) -> String {
-        String::from_utf8(self.text.to_vec()).unwrap()
+    pub fn text(&self) -> &str {
+        str::from_utf8(self.text).unwrap()
     }
 
     pub const fn offset(&self) -> usize {
