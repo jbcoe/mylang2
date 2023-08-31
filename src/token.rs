@@ -3,6 +3,7 @@ use std::str;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Kind {
     Colon,
+    Divide,
     EndOfFile,
     EqualSign,
     Identifier,
@@ -15,7 +16,10 @@ pub enum Kind {
     Int8,
     Integer,
     Let,
+    Minus,
     Mut,
+    Plus,
+    Star,
     String,
     Unknown,
     Whitespace,

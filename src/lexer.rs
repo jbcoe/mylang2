@@ -126,6 +126,14 @@ impl<'a> Lexer<'a> {
             Some(self.char_token(Kind::EqualSign))
         } else if self.char() == ':' {
             Some(self.char_token(Kind::Colon))
+        } else if self.char() == '+' {
+            Some(self.char_token(Kind::Plus))
+        } else if self.char() == '-' {
+            Some(self.char_token(Kind::Minus))
+        } else if self.char() == '/' {
+            Some(self.char_token(Kind::Divide))
+        } else if self.char() == '*' {
+            Some(self.char_token(Kind::Star))
         } else {
             None
         };
@@ -399,9 +407,50 @@ mod tests {
             (r#""oops"#, Kind::Unknown),
         ],
     }
+
     lexer_test_case! {
         name: empty_input,
         input: "",
         expected_tokens: Vec::<(String, Kind)>::new(),
+    }
+
+    lexer_test_case! {
+        name: plus,
+        input: "4 + 1",
+        expected_tokens: &[
+            ("4", Kind::Integer),
+            ("+", Kind::Plus),
+            ("1", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: minus,
+        input: "4 - 1",
+        expected_tokens: &[
+            ("4", Kind::Integer),
+            ("-", Kind::Minus),
+            ("1", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: divide,
+        input: "4 / 2",
+        expected_tokens: &[
+            ("4", Kind::Integer),
+            ("/", Kind::Divide),
+            ("2", Kind::Integer),
+        ],
+    }
+
+    lexer_test_case! {
+        name: multiply,
+        input: "4 * 2",
+        expected_tokens: &[
+            ("4", Kind::Integer),
+            ("*", Kind::Star),
+            ("2", Kind::Integer),
+        ],
     }
 }
