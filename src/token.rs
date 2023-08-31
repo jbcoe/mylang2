@@ -31,7 +31,7 @@ impl<'a> Token<'a> {
     pub const fn new(text: &'a [u8], offset: usize, kind: Kind) -> Token<'a> {
         Token { text, offset, kind }
     }
-    
+
     pub const fn kind(&self) -> Kind {
         self.kind
     }

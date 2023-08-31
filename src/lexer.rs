@@ -129,12 +129,13 @@ impl<'a> Lexer<'a> {
 
     // Attempts to read a symbol token, potentially advancing the lexer.
     fn maybe_read_symbol(&mut self) -> Option<Token<'a>> {
-        if self.char() == '=' {
-            return Some(self.char_token(Kind::EqualSign));
+        return if self.char() == '=' {
+            Some(self.char_token(Kind::EqualSign))
         } else if self.char() == ':' {
-            return Some(self.char_token(Kind::Colon));
-        }
-        return None;
+            Some(self.char_token(Kind::Colon))
+        } else {
+            None
+        };
     }
 
     // Attempts to read an integer token, potentially advancing the lexer.
@@ -167,7 +168,7 @@ impl<'a> Lexer<'a> {
 
         let token = self.text_token(start + 1, Kind::String);
         self.step(); // consume the closing quote.
-        return Some(token);
+        Some(token)
     }
 
     // Reads the next token unconditionally advancing the lexer.
