@@ -128,7 +128,7 @@ impl<'a> Lexer<'a> {
     }
 
     // Attempts to read a symbol token, potentially advancing the lexer.
-    pub fn maybe_read_symbol(&mut self) -> Option<Token<'a>> {
+    fn maybe_read_symbol(&mut self) -> Option<Token<'a>> {
         if self.char() == '=' {
             return Some(self.char_token(Kind::EqualSign));
         } else if self.char() == ':' {
@@ -138,7 +138,7 @@ impl<'a> Lexer<'a> {
     }
 
     // Attempts to read an integer token, potentially advancing the lexer.
-    pub fn maybe_read_integer(&mut self) -> Option<Token<'a>> {
+    fn maybe_read_integer(&mut self) -> Option<Token<'a>> {
         if !self.char().is_ascii_digit() {
             return None;
         }
@@ -150,7 +150,7 @@ impl<'a> Lexer<'a> {
     }
 
     // Attempts to read a string token, potentially advancing the lexer.
-    pub fn maybe_read_string(&mut self) -> Option<Token<'a>> {
+    fn maybe_read_string(&mut self) -> Option<Token<'a>> {
         if self.char() != '"' {
             return None;
         }
@@ -171,7 +171,7 @@ impl<'a> Lexer<'a> {
     }
 
     // Reads the next token unconditionally advancing the lexer.
-    pub fn read_token(&mut self) -> Token<'a> {
+    fn read_token(&mut self) -> Token<'a> {
         if self.char() == '\0' {
             return Token::end_of_file(self.position);
         } else if let Some(t) = self.maybe_read_whitespace() {
@@ -196,7 +196,7 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn next_token(&mut self) -> Token<'a> {
-        let token = self.read_token();        
+        let token = self.read_token();
         self.step();
         token
     }
