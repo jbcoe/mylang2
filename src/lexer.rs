@@ -536,8 +536,10 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: fn_keyword_and_arrow,
-        input: "fn sq(x: int32) -> int32",
+        name: fn_keyword_arrow_and_return,
+        input: "fn sq(x: int32) -> int32 {
+            return x * x
+        }",
         expected_tokens: &[
             ("fn", Kind::Fn),
             ("sq", Kind::Identifier),
@@ -548,6 +550,12 @@ mod tests {
             (")", Kind::RightParenthesis),
             ("->", Kind::Arrow),
             ("int32", Kind::Int32),
+            ("{", Kind::LeftBrace),
+            ("return", Kind::Return),
+            ("x", Kind::Identifier),
+            ("*", Kind::Star),
+            ("x", Kind::Identifier),
+            ("}", Kind::RightBrace),
         ],
     }
 
