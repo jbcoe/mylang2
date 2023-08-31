@@ -129,7 +129,13 @@ impl<'a> Lexer<'a> {
         } else if self.char() == '+' {
             Some(self.char_token(Kind::Plus))
         } else if self.char() == '-' {
-            Some(self.char_token(Kind::Minus))
+            return if self.peek_char() == '>' {
+                let start = self.position;
+                self.step();
+                Some(self.text_token(start, Kind::Arrow))
+            } else {
+                Some(self.char_token(Kind::Minus))
+            };
         } else if self.char() == '/' {
             Some(self.char_token(Kind::Divide))
         } else if self.char() == '*' {
@@ -476,6 +482,22 @@ mod tests {
             ("]", Kind::RightSquareBracket),
             ("{", Kind::LeftBrace),
             ("}", Kind::RightBrace),
+        ],
+    }
+
+    lexer_test_case! {
+        name: fn_keyword_and_arrow,
+        input: "fn sq(x: int32) -> int32",
+        expected_tokens: &[
+            ("fn", Kind::Fn),
+            ("sq", Kind::Identifier),
+            ("(", Kind::LeftParenthesis),
+            ("x", Kind::Identifier),
+            (":", Kind::Colon),
+            ("int32", Kind::Int32),
+            (")", Kind::RightParenthesis),
+            ("->", Kind::Arrow),
+            ("int32", Kind::Int32),
         ],
     }
 }

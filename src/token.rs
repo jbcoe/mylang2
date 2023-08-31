@@ -2,7 +2,9 @@ use std::str;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Kind {
+    Arrow,
     Colon,
+    Fn,
     Divide,
     EndOfFile,
     EqualSign,
@@ -75,6 +77,7 @@ impl<'a> Token<'a> {
 
 pub(crate) static KEYWORDS: phf::Map<&'static str, Kind> = phf::phf_map! {
     "let"=> Kind::Let,
+    "fn"=> Kind::Fn,
     "mut"=> Kind::Mut,
     "int1"=> Kind::Int1,
     "int2"=> Kind::Int2,
