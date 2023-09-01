@@ -18,7 +18,7 @@ pub struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn new(tokens: &'a [Token]) -> Parser<'a> {
+    fn new(tokens: &'a [Token]) -> Parser<'a> {
         let mut parser = Parser {
             tokens,
             position: 0,
@@ -26,7 +26,7 @@ impl<'a> Parser<'a> {
         };
         assert!(!parser.tokens.is_empty());
         assert!(parser.tokens.last().unwrap().kind() == Kind::EndOfFile);
-        parser.advance();
+        parser.step();
         parser
     }
 
@@ -45,7 +45,7 @@ impl<'a> Parser<'a> {
     }
 
     // Advances the parser.
-    fn advance(&mut self) {
+    fn step(&mut self) {
         if self.read_position >= self.tokens.len() {
             return;
         }
@@ -64,10 +64,10 @@ impl<'a> Parser<'a> {
         self.read_position = position + 1;
     }
 
-    fn try_parse_let_stmt(&mut self) -> Result<Statement, String> {
+    fn try_parse_let_stmt(&mut self) -> Result<Statement<'a>, String> {
         assert!(self.token().kind() == Kind::Let);
         let start = self.position;
-        self.advance(); // Consume the "let" token.
+        self.step(); // Consume the "let" token.
         let identifier = self.token();
         if identifier.kind() != Kind::Identifier {
             self.reset(start);
@@ -75,16 +75,16 @@ impl<'a> Parser<'a> {
         }
 
         let identifier = Indentifier {
-            name: identifier.text().to_string(),
+            name: identifier.text(),
         };
-        self.advance(); // Consume the identifier.
+        self.step(); // Consume the identifier.
 
         let colon = self.token();
         if colon.kind() != Kind::Colon {
             self.reset(start);
             return Err(format!("Expected colon, got {:?}", colon));
         }
-        self.advance(); // Consume the colon.
+        self.step(); // Consume the colon.
 
         let ttype = self.token();
         let typename = match ttype.kind() {
@@ -94,14 +94,14 @@ impl<'a> Parser<'a> {
                 return Err(format!("Expected type, got {:?}", colon));
             }
         };
-        self.advance(); // Consume the typename.
+        self.step(); // Consume the typename.
 
         let equals = self.token();
         if equals.kind() != Kind::EqualSign {
             self.reset(start);
             return Err(format!("Expected equals, got {:?}", equals));
         }
-        self.advance(); // Consume the equals symbol.
+        self.step(); // Consume the equals symbol.
 
         let literal = self.token();
         if literal.kind() != Kind::IntegerLiteral {
@@ -114,23 +114,18 @@ impl<'a> Parser<'a> {
             self.reset(start);
             return Err("Missing newline after let statement".to_string());
         }
-        self.advance(); // Consume the literal and whitespace.
+        self.step(); // Consume the literal and whitespace.
 
-        let expression = crate::ast::Expression::IntegerLiteral(literal.text().to_string());
+        let expression = crate::ast::Expression::IntegerLiteral(literal.text());
         Ok(ast::Statement::Let(LetStatement {
             identifier,
-            ttype: crate::ast::Type {
-                name: typename.to_string(),
-            },
+            ttype: crate::ast::Type { name: typename },
             expression: Box::new(expression),
         }))
     }
 
-    // Reads the next statement and advances the parser.
-    //
-    // Returns an error if the statement cannot be parsed.
-    // The parser is not advanced if an error is returned.
-    fn next_stmt(&mut self) -> Result<Statement, String> {
+    // Reads the next statement.
+    fn read_statement(&mut self) -> Result<Statement<'a>, String> {
         let token = self.token();
         match token.kind() {
             Kind::Let => self.try_parse_let_stmt(),
@@ -138,17 +133,30 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // Parses a program consuming the parser.
+    // Reads the next statement and advances the parser.
+    //
+    // Returns an error if the statement cannot be parsed.
+    // The parser is not advanced if an error is returned.
+    fn next_stmt(&mut self) -> Result<Statement<'a>, String> {
+        let stmt = self.read_statement();
+        if stmt.is_ok() {
+            self.step();
+        }
+        stmt
+    }
+
+    // Parses a program from tokens.
     //
     // Returns an error if the program cannot be parsed.
-    pub fn parse_program(mut self) -> Result<Program, ParserError> {
+    pub fn parse_program(tokens: &'a [Token]) -> Result<Program<'a>, ParserError> {
+        let mut parser = Parser::new(tokens);
         let mut statements = vec![];
-        while self.position < self.tokens.len() && self.token().kind() != Kind::EndOfFile {
-            match self.next_stmt() {
+        while parser.token().kind() != Kind::EndOfFile {
+            match parser.next_stmt() {
                 Ok(stmt) => statements.push(stmt),
                 Err(message) => return Err(ParserError { message }),
             }
-            self.advance();
+            parser.step();
         }
         Ok(Program { statements })
     }
@@ -159,14 +167,14 @@ mod tests {
     use crate::{
         ast::{self, Statement},
         lexer::Lexer,
+        parser::Parser,
     };
 
     #[test]
     fn empty_file_can_be_parsed() {
         let input = "";
         let tokens = Lexer::tokenize(input);
-        let parser = super::Parser::new(&tokens);
-        let program = parser.parse_program();
+        let program = Parser::parse_program(&tokens);
         assert!(program.is_ok());
         assert!(program.unwrap().statements.is_empty());
     }
@@ -175,15 +183,15 @@ mod tests {
     fn parse_let_statement() {
         let input = "let x: int32 = 5\n";
         let tokens = Lexer::tokenize(input);
-        let parser = super::Parser::new(&tokens);
-        match parser.parse_program() {
+        let program = Parser::parse_program(&tokens);
+        match program {
             Ok(program) => {
                 assert!(program.statements.len() == 1);
                 if let Statement::Let(let_stmt) = &program.statements[0] {
                     assert_eq!(let_stmt.identifier.name, "x");
                     assert_eq!(let_stmt.ttype.name, "int32");
                     if let ast::Expression::IntegerLiteral(value) = &*let_stmt.expression {
-                        assert_eq!(value, "5");
+                        assert_eq!(*value, "5");
                     } else {
                         panic!("Expected integer literal");
                     }
@@ -199,8 +207,8 @@ mod tests {
     fn fail_to_parse_let_statement_with_no_trailing_newline() {
         let input = "let x: int32 = 5";
         let tokens = Lexer::tokenize(input);
-        let parser = super::Parser::new(&tokens);
-        match parser.parse_program() {
+        let program = Parser::parse_program(&tokens);
+        match program {
             Ok(_) => {
                 panic!("Expected parse error statement");
             }

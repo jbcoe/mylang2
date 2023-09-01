@@ -1,26 +1,26 @@
-pub enum Statement {
-    Let(LetStatement),
+pub enum Statement<'a> {
+    Let(LetStatement<'a>),
 }
 
-pub enum Expression {
-    IntegerLiteral(String),
-    DecimalLiteral(String),
+pub enum Expression<'a> {
+    IntegerLiteral(&'a str),
+    DecimalLiteral(&'a str),
 }
 
-pub struct Type {
-    pub name: String,
+pub struct Type<'a> {
+    pub name: &'a str,
 }
 
-pub struct Indentifier {
-    pub name: String,
+pub struct Indentifier<'a> {
+    pub name: &'a str,
 }
 
-pub struct LetStatement {
-    pub identifier: Indentifier,
-    pub ttype: Type,
-    pub expression: Box<Expression>,
+pub struct LetStatement<'a> {
+    pub identifier: Indentifier<'a>,
+    pub ttype: Type<'a>,
+    pub expression: Box<Expression<'a>>,
 }
 
-pub struct Program {
-    pub statements: Vec<Statement>,
+pub struct Program<'a> {
+    pub statements: Vec<Statement<'a>>,
 }
