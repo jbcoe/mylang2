@@ -238,6 +238,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // Reads the next token and advances the lexer.
     pub fn next_token(&mut self) -> Token<'a> {
         let token = self.read_token();
         self.step();
