@@ -156,24 +156,15 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::ast::{self, Statement};
-
-    fn tokenize(input: &'static str) -> Vec<crate::token::Token<'static>> {
-        let mut tokens = vec![];
-        let mut lexer = crate::lexer::Lexer::new(input);
-        let mut token = lexer.next_token();
-        while token.kind() != crate::token::Kind::EndOfFile {
-            tokens.push(token);
-            token = lexer.next_token();
-        }
-        tokens.push(token);
-        tokens
-    }
+    use crate::{
+        ast::{self, Statement},
+        lexer::Lexer,
+    };
 
     #[test]
     fn empty_file_can_be_parsed() {
         let input = "";
-        let tokens = tokenize(input);
+        let tokens = Lexer::tokenize(input);
         let parser = super::Parser::new(&tokens);
         let program = parser.parse_program();
         assert!(program.is_ok());
@@ -183,7 +174,7 @@ mod tests {
     #[test]
     fn parse_let_statement() {
         let input = "let x: int32 = 5\n";
-        let tokens = tokenize(input);
+        let tokens = Lexer::tokenize(input);
         let parser = super::Parser::new(&tokens);
         match parser.parse_program() {
             Ok(program) => {
@@ -207,7 +198,7 @@ mod tests {
     #[test]
     fn fail_to_parse_let_statement_with_no_trailing_newline() {
         let input = "let x: int32 = 5";
-        let tokens = tokenize(input);
+        let tokens = Lexer::tokenize(input);
         let parser = super::Parser::new(&tokens);
         match parser.parse_program() {
             Ok(_) => {

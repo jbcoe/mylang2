@@ -9,8 +9,7 @@ pub struct Lexer<'a> {
     byte: u8,
 }
 impl<'a> Lexer<'a> {
-    #[must_use = "Creates a Lexer, has no side effects"]
-    pub fn new(input: &'a str) -> Lexer {
+    fn new(input: &'a str) -> Lexer {
         let mut lexer = Lexer {
             input: input.as_bytes(),
             position: 0,
@@ -239,10 +238,23 @@ impl<'a> Lexer<'a> {
     }
 
     // Reads the next token and advances the lexer.
-    pub fn next_token(&mut self) -> Token<'a> {
+    fn next_token(&mut self) -> Token<'a> {
         let token = self.read_token();
         self.step();
         token
+    }
+
+    // Converts a string into a vector of tokens.
+    pub fn tokenize(input_text: &str) -> Vec<Token> {
+        let mut lexer = Lexer::new(input_text);
+        let mut tokens = Vec::<Token>::new();
+        let mut t = lexer.next_token();
+        while t.kind() != Kind::EndOfFile {
+            tokens.push(t);
+            t = lexer.next_token();
+        }
+        tokens.push(t);
+        tokens
     }
 
     // Returns the 1-based row number of the given Token.
