@@ -124,11 +124,56 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    fn try_parse_binary_expression(&mut self) -> Result<Statement<'a>, String> {
+        assert!(self.token().kind() == Kind::Identifier);
+        let start = self.position;
+        let lhs_identifier = self.token();
+        if lhs_identifier.kind() != Kind::Identifier {
+            self.reset(start);
+            return Err(format!("Expected identifier, got {:?}", lhs_identifier));
+        }
+        let lhs = Indentifier {
+            name: lhs_identifier.text(),
+        };
+        self.step(); // Consume the identifier.
+
+        let plus = self.token();
+        if plus.kind() != Kind::Plus {
+            self.reset(start);
+            return Err(format!("Expected '+', got {:?}", plus));
+        }
+        self.step(); // Consume the plus symbol.
+
+        let rhs_identifier = self.token();
+        if rhs_identifier.kind() != Kind::Identifier {
+            self.reset(start);
+            return Err(format!("Expected identifier, got {:?}", rhs_identifier));
+        }
+        let rhs = Indentifier {
+            name: rhs_identifier.text(),
+        };
+
+        // Require a newline for the end of the statement.
+        if !self.peek_newline() {
+            self.reset(start);
+            return Err("Missing newline after binary expression".to_string());
+        }
+        self.step(); // Consume the identifier and newline.
+
+        let expression = crate::ast::Expression::BinaryExpression(ast::BinaryExpression {
+            operator: ast::BinaryOperator::Plus,
+            left: Box::new(ast::Expression::Identifier(lhs)),
+            right: Box::new(ast::Expression::Identifier(rhs)),
+        });
+        Ok(ast::Statement::Expression(expression))
+    }
+
     // Reads the next statement.
     fn read_statement(&mut self) -> Result<Statement<'a>, String> {
         let token = self.token();
         match token.kind() {
             Kind::Let => self.try_parse_let_stmt(),
+            Kind::Identifier => self.try_parse_binary_expression(),
             _ => Err(format!("Failed to parse token {:?}", token)),
         }
     }
@@ -165,7 +210,7 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use crate::{
-        ast::{self, Statement},
+        ast::{self, Expression, Statement},
         lexer::Lexer,
         parser::Parser,
     };
@@ -190,10 +235,43 @@ mod tests {
                 if let Statement::Let(let_stmt) = &program.statements[0] {
                     assert_eq!(let_stmt.identifier.name, "x");
                     assert_eq!(let_stmt.ttype.name, "int32");
-                    if let ast::Expression::IntegerLiteral(value) = &*let_stmt.expression {
+                    if let Expression::IntegerLiteral(value) = &*let_stmt.expression {
                         assert_eq!(*value, "5");
                     } else {
                         panic!("Expected integer literal");
+                    }
+                } else {
+                    panic!("Expected let statement");
+                }
+            }
+            Err(err) => panic!("Failed to parse program: {}", err.message),
+        }
+    }
+
+    #[test]
+    fn parse_binary_plus_expression() {
+        let input = "x + y\n";
+        let tokens = Lexer::tokenize(input);
+        let program = Parser::parse_program(&tokens);
+        match program {
+            Ok(program) => {
+                assert!(program.statements.len() == 1);
+                if let Statement::Expression(expr) = &program.statements[0] {
+                    match expr {
+                        Expression::BinaryExpression(binary_expr) => {
+                            if let Expression::Identifier(lhs) = &*binary_expr.left {
+                                assert_eq!(lhs.name, "x");
+                            } else {
+                                panic!("Expected identifier, got {:?}", binary_expr.left);
+                            }
+                            if let Expression::Identifier(rhs) = &*binary_expr.right {
+                                assert_eq!(rhs.name, "y");
+                            } else {
+                                panic!("Expected identifier, got {:?}", binary_expr.right);
+                            }
+                            assert_eq!(binary_expr.operator, ast::BinaryOperator::Plus)
+                        }
+                        _ => panic!("Expected binary expression"),
                     }
                 } else {
                     panic!("Expected let statement");
