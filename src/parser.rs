@@ -4,6 +4,7 @@ use crate::{
     ast::Program,
     ast::{
         self, BinaryExpression, Expression, Indentifier, IntegerLiteral, LetStatement, Statement,
+        Type,
     },
     token::{Kind, Token},
 };
@@ -223,6 +224,64 @@ impl<'a> Parser<'a> {
         Ok(ast::Statement::Expression(expression))
     }
 
+    fn try_parse_function(&mut self) -> Result<Statement<'a>, String> {
+        let start = self.position;
+        assert!(self.token().kind() == Kind::Fn);
+        self.step(); // Consume the "fn" token.
+
+        let identifier_token = self.token();
+        let identifier = match identifier_token.kind() {
+            Kind::Identifier => Indentifier {
+                name: identifier_token.text(),
+            },
+            _ => {
+                self.reset(start);
+                return Err(format!("Expected identifier, got {:?}", identifier_token));
+            }
+        };
+        self.step(); // Consume the identifier.
+
+        if self.token().kind() != Kind::LeftParenthesis {
+            self.reset(start);
+            return Err(format!("Expected '(', got {:?}", self.token()));
+        }
+        self.step(); // Consume the '(' token.
+
+        if self.token().kind() != Kind::RightParenthesis {
+            self.reset(start);
+            return Err(format!("Expected ')', got {:?}", self.token()));
+        }
+        self.step(); // Consume the ')' token.
+
+        if self.token().kind() != Kind::Arrow {
+            self.reset(start);
+            return Err(format!("Expected '->', got {:?}", self.token()));
+        }
+        self.step(); // Consume the '->' token.
+
+        let return_type = match self.token().kind() {
+            Kind::Int32 => Type { name: "int32" },
+            _ => {
+                self.reset(start);
+                return Err(format!("Expected 'int32', got {:?}", self.token()));
+            }
+        };
+
+        if !self.peek_newline() {
+            self.reset(start);
+            return Err("Missing newline after function declaration".to_string());
+        }
+        self.step(); // Consume the return type and newline.
+
+        return Ok(ast::Statement::FunctionDeclaration(
+            ast::FunctionDeclaration {
+                identifier,
+                parameters: vec![],
+                ttype: return_type,
+            },
+        ));
+    }
+
     // Reads the next statement.
     fn read_statement(&mut self) -> Result<Statement<'a>, String> {
         let token = self.token();
@@ -230,6 +289,7 @@ impl<'a> Parser<'a> {
             Kind::Let => self.try_parse_let_stmt(),
             Kind::Identifier => self.try_parse_binary_expression(),
             Kind::IntegerLiteral => self.try_parse_binary_expression(),
+            Kind::Fn => self.try_parse_function(),
             _ => Err(format!("Failed to parse token {:?}", token)),
         }
     }
@@ -380,7 +440,7 @@ mod tests {
         input:"let x: int32 = 5\n",
         matcher:match_let_statement!(
             "x",
-            match_any_type!(),
+            match_type!(),
             match_integer_literal!("5"))
     }
 
@@ -389,7 +449,7 @@ mod tests {
         input:"let x: int32 = y\n",
         matcher:match_let_statement!(
             "x",
-            match_any_type!(),
+            match_type!(),
             match_identifier!("y"))
     }
 
@@ -398,7 +458,15 @@ mod tests {
         input:"let mut x: int32 = y\n",
         matcher:match_mutable_let_statement!(
             "x",
-            match_any_type!(),
+            match_type!(),
             match_any_expression!())
+    }
+
+    parse_statement_test! {
+        name:parse_function,
+        input:"fn five() -> int32\n",
+        matcher:match_function_declaration!(
+            "five",
+            match_type!("int32"))
     }
 }

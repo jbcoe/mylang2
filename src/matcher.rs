@@ -30,6 +30,22 @@ impl TypeMatcher for AnyTypeMatcher {
     }
 }
 
+pub struct NamedTypeMatcher {
+    name: String,
+}
+
+impl NamedTypeMatcher {
+    pub fn new(name: String) -> Box<NamedTypeMatcher> {
+        Box::new(NamedTypeMatcher { name })
+    }
+}
+
+impl TypeMatcher for NamedTypeMatcher {
+    fn matches(&self, ttype: &Type) -> bool {
+        ttype.name == self.name
+    }
+}
+
 pub struct AnyStatementMatcher {
     _private: (),
 }
@@ -76,6 +92,26 @@ impl StatementMatcher for LetStatementMatcher {
                 && let_statement.identifier.name == self.identifier
                 && self.ttype.matches(&let_statement.ttype)
                 && self.expression.matches(&let_statement.expression)
+        })
+    }
+}
+
+pub struct FunctionDeclarationMatcher {
+    identifier: String,
+    ttype: Box<dyn TypeMatcher>,
+}
+
+impl FunctionDeclarationMatcher {
+    pub fn new(identifier: String, ttype: Box<dyn TypeMatcher>) -> Box<FunctionDeclarationMatcher> {
+        Box::new(FunctionDeclarationMatcher { identifier, ttype })
+    }
+}
+
+impl StatementMatcher for FunctionDeclarationMatcher {
+    fn matches(&self, statement: &Statement) -> bool {
+        matches!(statement, Statement::FunctionDeclaration(function_declaration) if {
+            function_declaration.identifier.name == self.identifier
+                && self.ttype.matches(&function_declaration.ttype)
         })
     }
 }
@@ -257,5 +293,22 @@ macro_rules! match_let_statement {
 macro_rules! match_mutable_let_statement {
     ($identifier:literal, $ttype:expr, $expression:expr) => {
         LetStatementMatcher::new($identifier.to_string(), $ttype, true, $expression)
+    };
+}
+
+#[macro_export]
+macro_rules! match_function_declaration {
+    ($identifier:literal, $ttype:expr) => {
+        FunctionDeclarationMatcher::new($identifier.to_string(), $ttype)
+    };
+}
+
+#[macro_export]
+macro_rules! match_type {
+    ($name:literal) => {
+        NamedTypeMatcher::new($name.to_string())
+    };
+    () => {
+        AnyTypeMatcher::new()
     };
 }

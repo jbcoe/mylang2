@@ -1,7 +1,21 @@
 #[derive(Debug)]
 pub enum Statement<'a> {
     Let(LetStatement<'a>),
+    FunctionDeclaration(FunctionDeclaration<'a>),
     Expression(Expression<'a>),
+}
+
+#[derive(Debug)]
+pub struct Parameter<'a> {
+    pub identifier: Indentifier<'a>,
+    pub ttype: Type<'a>,
+}
+
+#[derive(Debug)]
+pub struct FunctionDeclaration<'a> {
+    pub identifier: Indentifier<'a>,
+    pub parameters: Vec<Parameter<'a>>,
+    pub ttype: Type<'a>,
 }
 
 #[derive(Debug)]
