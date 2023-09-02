@@ -3,7 +3,31 @@ name = "mylang2"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "mylang2"
+path = "src/lib.rs"
+test = true
+doctest = false
+
+[[bin]]
+name = "parser"
+src = "src/parser.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "format"
+src = "src/format.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "lexer"
+src = "src/lexer.rs"
+test = false
+bench = false
 
 [dependencies]
 phf = { version = "0.11.2", features = ["macros"] }
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
