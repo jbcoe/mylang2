@@ -1,6 +1,6 @@
 #![macro_use]
 
-use crate::ast::{BinaryOperator, Expression, Statement};
+use crate::ast::{BinaryOperator, Expression, Statement, Type};
 
 pub trait ExpressionMatcher {
     fn matches(&self, expression: &Expression) -> bool;
@@ -8,6 +8,76 @@ pub trait ExpressionMatcher {
 
 pub trait StatementMatcher {
     fn matches(&self, statement: &Statement) -> bool;
+}
+
+pub trait TypeMatcher {
+    fn matches(&self, ttype: &Type) -> bool;
+}
+
+pub struct AnyTypeMatcher {
+    _private: (),
+}
+
+impl AnyTypeMatcher {
+    pub fn new() -> Box<AnyTypeMatcher> {
+        Box::new(AnyTypeMatcher { _private: () })
+    }
+}
+
+impl TypeMatcher for AnyTypeMatcher {
+    fn matches(&self, _ttype: &Type) -> bool {
+        true
+    }
+}
+
+pub struct AnyStatementMatcher {
+    _private: (),
+}
+
+impl AnyStatementMatcher {
+    pub fn new() -> Box<AnyStatementMatcher> {
+        Box::new(AnyStatementMatcher { _private: () })
+    }
+}
+
+impl StatementMatcher for AnyStatementMatcher {
+    fn matches(&self, _statement: &Statement) -> bool {
+        true
+    }
+}
+
+pub struct LetStatementMatcher {
+    identifier: String,
+    ttype: Box<dyn TypeMatcher>,
+    mutable: bool,
+    expression: Box<dyn ExpressionMatcher>,
+}
+
+impl LetStatementMatcher {
+    pub fn new(
+        identifier: String,
+        ttype: Box<dyn TypeMatcher>,
+        mutable: bool,
+        expression: Box<dyn ExpressionMatcher>,
+    ) -> Box<LetStatementMatcher> {
+        Box::new(LetStatementMatcher {
+            identifier,
+            ttype,
+            mutable,
+            expression,
+        })
+    }
+}
+
+impl StatementMatcher for LetStatementMatcher {
+    fn matches(&self, statement: &Statement) -> bool {
+        matches!(statement, Statement::Let(let_statement) if {
+            let_statement.mutable == self.mutable
+                && let_statement.identifier.name == self.identifier
+                && self.ttype.matches(&let_statement.ttype)
+                && self.expression.matches(&let_statement.expression)
+        })
+    }
 }
 
 pub struct AnyExpressionMatcher {
@@ -166,5 +236,26 @@ macro_rules! match_binary_expression {
 macro_rules! match_any_expression {
     () => {
         AnyExpressionMatcher::new()
+    };
+}
+
+#[macro_export]
+macro_rules! match_any_type {
+    () => {
+        AnyTypeMatcher::new()
+    };
+}
+
+#[macro_export]
+macro_rules! match_let_statement {
+    ($identifier:literal, $ttype:expr, $expression:expr) => {
+        LetStatementMatcher::new($identifier.to_string(), $ttype, false, $expression)
+    };
+}
+
+#[macro_export]
+macro_rules! match_mutable_let_statement {
+    ($identifier:literal, $ttype:expr, $expression:expr) => {
+        LetStatementMatcher::new($identifier.to_string(), $ttype, true, $expression)
     };
 }

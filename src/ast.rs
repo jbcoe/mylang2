@@ -45,6 +45,7 @@ pub struct Indentifier<'a> {
 pub struct LetStatement<'a> {
     pub identifier: Indentifier<'a>,
     pub ttype: Type<'a>,
+    pub mutable: bool,
     pub expression: Box<Expression<'a>>,
 }
 

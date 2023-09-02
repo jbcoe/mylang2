@@ -70,14 +70,26 @@ impl<'a> Parser<'a> {
         assert!(self.token().kind() == Kind::Let);
         let start = self.position;
         self.step(); // Consume the "let" token.
-        let identifier = self.token();
-        if identifier.kind() != Kind::Identifier {
-            self.reset(start);
-            return Err(format!("Expected identifier, got {:?}", identifier));
-        }
 
-        let identifier = Indentifier {
-            name: identifier.text(),
+        // See if we have a `mut` keyword
+        let mut_token = self.token();
+        let mutable = match mut_token.kind() {
+            Kind::Mut => {
+                self.step(); // Consume the "mut" token.
+                true
+            }
+            _ => false,
+        };
+
+        let identifier_token = self.token();
+        let identifier = match identifier_token.kind() {
+            Kind::Identifier => Indentifier {
+                name: identifier_token.text(),
+            },
+            _ => {
+                self.reset(start);
+                return Err(format!("Expected identifier, got {:?}", identifier_token));
+            }
         };
         self.step(); // Consume the identifier.
 
@@ -88,42 +100,54 @@ impl<'a> Parser<'a> {
         }
         self.step(); // Consume the colon.
 
-        let ttype = self.token();
-        let typename = match ttype.kind() {
-            Kind::Int32 => "int32",
+        let ttype_token = self.token();
+        let ttype = match ttype_token.kind() {
+            Kind::Int32 => ast::Type { name: "int32" },
             _ => {
                 self.reset(start);
                 return Err(format!("Expected type, got {:?}", colon));
             }
         };
-        self.step(); // Consume the typename.
+        self.step(); // Consume the type.
 
-        let equals = self.token();
-        if equals.kind() != Kind::EqualSign {
-            self.reset(start);
-            return Err(format!("Expected equals, got {:?}", equals));
+        let equals_token = self.token();
+        match equals_token.kind() {
+            Kind::EqualSign => (),
+            _ => {
+                self.reset(start);
+                return Err(format!("Expected equals, got {:?}", equals_token));
+            }
         }
         self.step(); // Consume the equals symbol.
 
-        let literal = self.token();
-        if literal.kind() != Kind::IntegerLiteral {
-            self.reset(start);
-            return Err(format!("Expected integer literal, got {:?}", literal));
-        }
+        let expression_token = self.token();
+        let expression = match expression_token.kind() {
+            Kind::IntegerLiteral => crate::ast::Expression::IntegerLiteral(IntegerLiteral {
+                text: expression_token.text(),
+            }),
+            Kind::Identifier => crate::ast::Expression::Identifier(Indentifier {
+                name: expression_token.text(),
+            }),
+            _ => {
+                self.reset(start);
+                return Err(format!(
+                    "Expected integer literal or identifier, got {:?}",
+                    expression_token
+                ));
+            }
+        };
 
         // Require a newline for the end of the statement.
         if !self.peek_newline() {
             self.reset(start);
             return Err("Missing newline after let statement".to_string());
         }
-        self.step(); // Consume the literal and whitespace.
+        self.step(); // Consume the value and whitespace.
 
-        let expression = crate::ast::Expression::IntegerLiteral(IntegerLiteral {
-            text: literal.text(),
-        });
         Ok(ast::Statement::Let(LetStatement {
             identifier,
-            ttype: crate::ast::Type { name: typename },
+            mutable,
+            ttype,
             expression: Box::new(expression),
         }))
     }
@@ -253,30 +277,6 @@ mod tests {
     }
 
     #[test]
-    fn parse_let_statement() {
-        let input = "let x: int32 = 5\n";
-        let tokens = Lexer::tokenize(input);
-        let program = Parser::parse_program(&tokens);
-        match program {
-            Ok(program) => {
-                assert!(program.statements.len() == 1);
-                if let ast::Statement::Let(let_stmt) = &program.statements[0] {
-                    assert_eq!(let_stmt.identifier.name, "x");
-                    assert_eq!(let_stmt.ttype.name, "int32");
-                    if let ast::Expression::IntegerLiteral(value) = &*let_stmt.expression {
-                        assert_eq!(value.text, "5");
-                    } else {
-                        panic!("Expected integer literal");
-                    }
-                } else {
-                    panic!("Expected let statement");
-                }
-            }
-            Err(err) => panic!("Failed to parse program: {}", err.message),
-        }
-    }
-
-    #[test]
     fn fail_to_parse_let_statement_with_no_trailing_newline() {
         let input = "let x: int32 = 5";
         let tokens = Lexer::tokenize(input);
@@ -288,6 +288,23 @@ mod tests {
             Err(err) => {
                 assert!(err.message == "Missing newline after let statement");
             }
+        }
+    }
+
+    #[test]
+    fn test_matcher() {
+        let input = "x + y\n";
+        let tokens = Lexer::tokenize(input);
+        match Parser::parse_program(&tokens) {
+            Ok(program) => {
+                let matcher = match_binary_expression!();
+                if let ast::Statement::Expression(expr) = &program.statements[0] {
+                    assert!(matcher.matches(expr));
+                } else {
+                    panic!("Expected an expression statement");
+                }
+            }
+            Err(err) => panic!("Failed to parse program: {}", err.message),
         }
     }
 
@@ -308,23 +325,6 @@ mod tests {
                 }
             }
         };
-    }
-
-    #[test]
-    fn test_matcher() {
-        let input = "x + y\n";
-        let tokens = Lexer::tokenize(input);
-        match Parser::parse_program(&tokens) {
-            Ok(program) => {
-                let matcher = match_binary_expression!();
-                if let ast::Statement::Expression(expr) = &program.statements[0] {
-                    assert!(matcher.matches(expr));
-                } else {
-                    panic!("Expected an expression statement");
-                }
-            }
-            Err(err) => panic!("Failed to parse program: {}", err.message),
-        }
     }
 
     parse_expression_test!(name:parse_binary_plus_expression_with_identifiers,
@@ -361,4 +361,44 @@ mod tests {
                             match_any_expression!(),
                             ast::BinaryOperator::Divide,
                             match_any_expression!()));
+
+    macro_rules! parse_statement_test {
+        (name:$name:ident, input:$input:expr, matcher:$matcher:expr) => {
+            #[test]
+            fn $name() {
+                let tokens = Lexer::tokenize($input);
+                match Parser::parse_program(&tokens) {
+                    Ok(program) => assert!($matcher.matches(&program.statements[0])),
+                    Err(err) => panic!("Failed to parse program: {}", err.message),
+                }
+            }
+        };
+    }
+
+    parse_statement_test! {
+        name:parse_let_statement_with_integer_literal,
+        input:"let x: int32 = 5\n",
+        matcher:match_let_statement!(
+            "x",
+            match_any_type!(),
+            match_integer_literal!("5"))
+    }
+
+    parse_statement_test! {
+        name:parse_let_statement_with_identifier,
+        input:"let x: int32 = y\n",
+        matcher:match_let_statement!(
+            "x",
+            match_any_type!(),
+            match_identifier!("y"))
+    }
+
+    parse_statement_test! {
+        name:parse_mutable_let_statement,
+        input:"let mut x: int32 = y\n",
+        matcher:match_mutable_let_statement!(
+            "x",
+            match_any_type!(),
+            match_any_expression!())
+    }
 }
