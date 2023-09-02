@@ -2,7 +2,7 @@
 
 use crate::{
     ast::Program,
-    ast::{self, Indentifier, LetStatement, Statement},
+    ast::{self, Expression, Indentifier, IntegerLiteral, LetStatement, Statement},
     token::{Kind, Token},
 };
 
@@ -116,7 +116,9 @@ impl<'a> Parser<'a> {
         }
         self.step(); // Consume the literal and whitespace.
 
-        let expression = crate::ast::Expression::IntegerLiteral(literal.text());
+        let expression = crate::ast::Expression::IntegerLiteral(IntegerLiteral {
+            text: literal.text(),
+        });
         Ok(ast::Statement::Let(LetStatement {
             identifier,
             ttype: crate::ast::Type { name: typename },
@@ -125,15 +127,25 @@ impl<'a> Parser<'a> {
     }
 
     fn try_parse_binary_expression(&mut self) -> Result<Statement<'a>, String> {
-        assert!(self.token().kind() == Kind::Identifier);
         let start = self.position;
-        let lhs_identifier = self.token();
-        if lhs_identifier.kind() != Kind::Identifier {
-            self.reset(start);
-            return Err(format!("Expected identifier, got {:?}", lhs_identifier));
-        }
-        let lhs = Indentifier {
-            name: lhs_identifier.text(),
+        let lhs_token = self.token();
+        let lhs = match lhs_token.kind() {
+            Kind::Identifier => {
+                let id = Indentifier {
+                    name: lhs_token.text(),
+                };
+                Box::new(Expression::Identifier(id))
+            }
+            Kind::IntegerLiteral => {
+                let literal = IntegerLiteral {
+                    text: lhs_token.text(),
+                };
+                Box::new(Expression::IntegerLiteral(literal))
+            }
+            _ => {
+                self.reset(start);
+                return Err(format!("Expected identifier, got {:?}", lhs_token));
+            }
         };
         self.step(); // Consume the identifier.
 
@@ -144,13 +156,24 @@ impl<'a> Parser<'a> {
         }
         self.step(); // Consume the plus symbol.
 
-        let rhs_identifier = self.token();
-        if rhs_identifier.kind() != Kind::Identifier {
-            self.reset(start);
-            return Err(format!("Expected identifier, got {:?}", rhs_identifier));
-        }
-        let rhs = Indentifier {
-            name: rhs_identifier.text(),
+        let rhs_token = self.token();
+        let rhs = match rhs_token.kind() {
+            Kind::Identifier => {
+                let id = Indentifier {
+                    name: rhs_token.text(),
+                };
+                Box::new(Expression::Identifier(id))
+            }
+            Kind::IntegerLiteral => {
+                let literal = IntegerLiteral {
+                    text: rhs_token.text(),
+                };
+                Box::new(Expression::IntegerLiteral(literal))
+            }
+            _ => {
+                self.reset(start);
+                return Err(format!("Expected identifier, got {:?}", rhs_token));
+            }
         };
 
         // Require a newline for the end of the statement.
@@ -162,8 +185,8 @@ impl<'a> Parser<'a> {
 
         let expression = crate::ast::Expression::BinaryExpression(ast::BinaryExpression {
             operator: ast::BinaryOperator::Plus,
-            left: Box::new(ast::Expression::Identifier(lhs)),
-            right: Box::new(ast::Expression::Identifier(rhs)),
+            left: lhs,
+            right: rhs,
         });
         Ok(ast::Statement::Expression(expression))
     }
@@ -174,6 +197,7 @@ impl<'a> Parser<'a> {
         match token.kind() {
             Kind::Let => self.try_parse_let_stmt(),
             Kind::Identifier => self.try_parse_binary_expression(),
+            Kind::IntegerLiteral => self.try_parse_binary_expression(),
             _ => Err(format!("Failed to parse token {:?}", token)),
         }
     }
@@ -236,7 +260,7 @@ mod tests {
                     assert_eq!(let_stmt.identifier.name, "x");
                     assert_eq!(let_stmt.ttype.name, "int32");
                     if let Expression::IntegerLiteral(value) = &*let_stmt.expression {
-                        assert_eq!(*value, "5");
+                        assert_eq!(value.text, "5");
                     } else {
                         panic!("Expected integer literal");
                     }
@@ -249,7 +273,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_binary_plus_expression() {
+    fn parse_binary_plus_expression_with_identifiers() {
         let input = "x + y\n";
         let tokens = Lexer::tokenize(input);
         let program = Parser::parse_program(&tokens);
@@ -268,6 +292,39 @@ mod tests {
                                 assert_eq!(rhs.name, "y");
                             } else {
                                 panic!("Expected identifier, got {:?}", binary_expr.right);
+                            }
+                            assert_eq!(binary_expr.operator, ast::BinaryOperator::Plus)
+                        }
+                        _ => panic!("Expected binary expression"),
+                    }
+                } else {
+                    panic!("Expected let statement");
+                }
+            }
+            Err(err) => panic!("Failed to parse program: {}", err.message),
+        }
+    }
+
+    #[test]
+    fn parse_binary_plus_expression_with_integer_literals() {
+        let input = "2 + 4\n";
+        let tokens = Lexer::tokenize(input);
+        let program = Parser::parse_program(&tokens);
+        match program {
+            Ok(program) => {
+                assert!(program.statements.len() == 1);
+                if let Statement::Expression(expr) = &program.statements[0] {
+                    match expr {
+                        Expression::BinaryExpression(binary_expr) => {
+                            if let Expression::IntegerLiteral(lhs) = &*binary_expr.left {
+                                assert_eq!(lhs.text, "2");
+                            } else {
+                                panic!("Expected integer literal, got {:?}", binary_expr.left);
+                            }
+                            if let Expression::IntegerLiteral(rhs) = &*binary_expr.right {
+                                assert_eq!(rhs.text, "4");
+                            } else {
+                                panic!("Expected integer literal, got {:?}", binary_expr.right);
                             }
                             assert_eq!(binary_expr.operator, ast::BinaryOperator::Plus)
                         }

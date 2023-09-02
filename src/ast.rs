@@ -6,9 +6,14 @@ pub enum Statement<'a> {
 
 #[derive(Debug)]
 pub enum Expression<'a> {
-    IntegerLiteral(&'a str),
+    IntegerLiteral(IntegerLiteral<'a>),
     Identifier(Indentifier<'a>),
     BinaryExpression(BinaryExpression<'a>),
+}
+
+#[derive(Debug)]
+pub struct IntegerLiteral<'a> {
+    pub text: &'a str,
 }
 
 #[derive(Debug)]
