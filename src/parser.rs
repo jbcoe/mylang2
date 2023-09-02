@@ -2,7 +2,9 @@
 
 use crate::{
     ast::Program,
-    ast::{self, Expression, Indentifier, IntegerLiteral, LetStatement, Statement},
+    ast::{
+        self, BinaryExpression, Expression, Indentifier, IntegerLiteral, LetStatement, Statement,
+    },
     token::{Kind, Token},
 };
 
@@ -128,51 +130,57 @@ impl<'a> Parser<'a> {
 
     fn try_parse_binary_expression(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
-        let lhs_token = self.token();
-        let lhs = match lhs_token.kind() {
+        let left_token = self.token();
+        let left = match left_token.kind() {
             Kind::Identifier => {
                 let id = Indentifier {
-                    name: lhs_token.text(),
+                    name: left_token.text(),
                 };
                 Box::new(Expression::Identifier(id))
             }
             Kind::IntegerLiteral => {
                 let literal = IntegerLiteral {
-                    text: lhs_token.text(),
+                    text: left_token.text(),
                 };
                 Box::new(Expression::IntegerLiteral(literal))
             }
             _ => {
                 self.reset(start);
-                return Err(format!("Expected identifier, got {:?}", lhs_token));
+                return Err(format!("Expected identifier, got {:?}", left_token));
             }
         };
         self.step(); // Consume the identifier.
 
-        let plus = self.token();
-        if plus.kind() != Kind::Plus {
-            self.reset(start);
-            return Err(format!("Expected '+', got {:?}", plus));
-        }
-        self.step(); // Consume the plus symbol.
+        let op_token = self.token();
+        let operator = match op_token.kind() {
+            Kind::Plus => ast::BinaryOperator::Plus,
+            Kind::Minus => ast::BinaryOperator::Minus,
+            Kind::Star => ast::BinaryOperator::Star,
+            Kind::Divide => ast::BinaryOperator::Divide,
+            _ => {
+                self.reset(start);
+                return Err(format!("Expected '+', got {:?}", op_token));
+            }
+        };
+        self.step(); // Consume the op symbol.
 
-        let rhs_token = self.token();
-        let rhs = match rhs_token.kind() {
+        let right_token = self.token();
+        let right = match right_token.kind() {
             Kind::Identifier => {
                 let id = Indentifier {
-                    name: rhs_token.text(),
+                    name: right_token.text(),
                 };
                 Box::new(Expression::Identifier(id))
             }
             Kind::IntegerLiteral => {
                 let literal = IntegerLiteral {
-                    text: rhs_token.text(),
+                    text: right_token.text(),
                 };
                 Box::new(Expression::IntegerLiteral(literal))
             }
             _ => {
                 self.reset(start);
-                return Err(format!("Expected identifier, got {:?}", rhs_token));
+                return Err(format!("Expected identifier, got {:?}", right_token));
             }
         };
 
@@ -183,10 +191,10 @@ impl<'a> Parser<'a> {
         }
         self.step(); // Consume the identifier and newline.
 
-        let expression = crate::ast::Expression::BinaryExpression(ast::BinaryExpression {
-            operator: ast::BinaryOperator::Plus,
-            left: lhs,
-            right: rhs,
+        let expression = Expression::BinaryExpression(BinaryExpression {
+            operator,
+            left,
+            right,
         });
         Ok(ast::Statement::Expression(expression))
     }
@@ -233,7 +241,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ast, lexer::Lexer, match_binary_expression, matcher::*, parser::Parser, *};
+    use crate::{ast, lexer::Lexer, matcher::*, parser::Parser, *};
 
     #[test]
     fn empty_file_can_be_parsed() {
@@ -321,13 +329,36 @@ mod tests {
 
     parse_expression_test!(name:parse_binary_plus_expression_with_identifiers,
                  input:"x + y\n",
-                 matcher:match_binary_expression!(match_identifier!("x"),
-                                                  ast::BinaryOperator::Plus,
-                                                  match_identifier!("y")));
+                 matcher:match_binary_expression!(
+                    match_identifier!("x"),
+                    ast::BinaryOperator::Plus,
+                    match_identifier!("y")));
 
     parse_expression_test!(name:parse_binary_plus_expression_with_integer_literals,
                  input:"2 + 4\n",
-                 matcher:match_binary_expression!(match_integer_literal!("2"),
-                                                  ast::BinaryOperator::Plus,
-                                                  match_integer_literal!("4")));
+                 matcher:match_binary_expression!(
+                    match_integer_literal!("2"),
+                    ast::BinaryOperator::Plus,
+                    match_integer_literal!("4")));
+
+    parse_expression_test!(name:parse_binary_minus_expression,
+        input:"2 - 4\n",
+        matcher:match_binary_expression!(
+            match_any_expression!(),
+            ast::BinaryOperator::Minus,
+            match_any_expression!()));
+
+    parse_expression_test!(name:parse_binary_star_expression,
+                input:"2 * 4\n",
+                matcher:match_binary_expression!(
+                    match_any_expression!(),
+                    ast::BinaryOperator::Star,
+                    match_any_expression!()));
+
+    parse_expression_test!(name:parse_binary_divide_expression,
+                        input:"2 / 4\n",
+                        matcher:match_binary_expression!(
+                            match_any_expression!(),
+                            ast::BinaryOperator::Divide,
+                            match_any_expression!()));
 }

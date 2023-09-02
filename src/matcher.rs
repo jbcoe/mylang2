@@ -10,6 +10,22 @@ pub trait StatementMatcher {
     fn matches(&self, statement: &Statement) -> bool;
 }
 
+pub struct AnyExpressionMatcher {
+    _private: (),
+}
+
+impl AnyExpressionMatcher {
+    pub fn new() -> Box<AnyExpressionMatcher> {
+        Box::new(AnyExpressionMatcher { _private: () })
+    }
+}
+
+impl ExpressionMatcher for AnyExpressionMatcher {
+    fn matches(&self, _expression: &Expression) -> bool {
+        true
+    }
+}
+
 pub struct IdentifierMatcher {
     identifier: String,
 }
@@ -26,11 +42,13 @@ impl ExpressionMatcher for IdentifierMatcher {
     }
 }
 
-pub struct AnyIdentifierMatcher {}
+pub struct AnyIdentifierMatcher {
+    _private: (),
+}
 
 impl AnyIdentifierMatcher {
     pub fn new() -> Box<AnyIdentifierMatcher> {
-        Box::new(AnyIdentifierMatcher {})
+        Box::new(AnyIdentifierMatcher { _private: () })
     }
 }
 
@@ -55,11 +73,13 @@ impl ExpressionMatcher for IntegerLiteralMatcher {
         matches!(expression, Expression::IntegerLiteral(i) if i.text == self.identifier)
     }
 }
-pub struct AnyIntegerLiteralMatcher {}
+pub struct AnyIntegerLiteralMatcher {
+    _private: (),
+}
 
 impl AnyIntegerLiteralMatcher {
     pub fn new() -> Box<AnyIntegerLiteralMatcher> {
-        Box::new(AnyIntegerLiteralMatcher {})
+        Box::new(AnyIntegerLiteralMatcher { _private: () })
     }
 }
 
@@ -128,7 +148,7 @@ macro_rules! match_identifier {
         IdentifierMatcher::new($identifier.to_string())
     };
     () => {
-        Box::new(AnyIdentifierMatcher {})
+        AnyIdentifierMatcher::new()
     };
 }
 
@@ -139,5 +159,12 @@ macro_rules! match_binary_expression {
     };
     () => {
         AnyBinaryExpressionMatcher::new()
+    };
+}
+
+#[macro_export]
+macro_rules! match_any_expression {
+    () => {
+        AnyExpressionMatcher::new()
     };
 }
