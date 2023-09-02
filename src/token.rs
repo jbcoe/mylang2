@@ -34,6 +34,7 @@ pub enum Kind {
     RightBrace,
     RightParenthesis,
     RightSquareBracket,
+    Semicolon,
     Star,
     String,
     Unknown,

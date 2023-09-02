@@ -38,15 +38,6 @@ impl<'a> Parser<'a> {
         &self.tokens[self.position]
     }
 
-    // Returns true if the next token is a newline.
-    fn peek_newline(&self) -> bool {
-        if self.read_position >= self.tokens.len() {
-            return false;
-        }
-        return self.tokens[self.read_position].kind() == Kind::Whitespace
-            && self.tokens[self.read_position].text().starts_with('\n');
-    }
-
     // Advances the parser.
     fn step(&mut self) {
         if self.read_position >= self.tokens.len() {
@@ -137,13 +128,16 @@ impl<'a> Parser<'a> {
                 ));
             }
         };
+        self.step(); // Consume the value.
 
-        // Require a newline for the end of the statement.
-        if !self.peek_newline() {
+        if self.token().kind() != Kind::Semicolon {
             self.reset(start);
-            return Err("Missing newline after let statement".to_string());
+            return Err(format!(
+                "Expected semicolon at end of statement, got {:?}",
+                self.token()
+            ));
         }
-        self.step(); // Consume the value and whitespace.
+        self.step(); // Consume the semicolon.
 
         Ok(ast::Statement::Let(LetStatement {
             identifier,
@@ -208,13 +202,16 @@ impl<'a> Parser<'a> {
                 return Err(format!("Expected identifier, got {:?}", right_token));
             }
         };
+        self.step(); // Consume the identifier.
 
-        // Require a newline for the end of the statement.
-        if !self.peek_newline() {
+        if self.token().kind() != Kind::Semicolon {
             self.reset(start);
-            return Err("Missing newline after binary expression".to_string());
+            return Err(format!(
+                "Expected semicolon at end of binary expression, got {:?}",
+                self.token()
+            ));
         }
-        self.step(); // Consume the identifier and newline.
+        self.step(); // Consume the semicolon.
 
         let expression = Expression::BinaryExpression(BinaryExpression {
             operator,
@@ -266,12 +263,16 @@ impl<'a> Parser<'a> {
                 return Err(format!("Expected 'int32', got {:?}", self.token()));
             }
         };
+        self.step(); // Consume the return type.
 
-        if !self.peek_newline() {
+        if self.token().kind() != Kind::Semicolon {
             self.reset(start);
-            return Err("Missing newline after function declaration".to_string());
+            return Err(format!(
+                "Expected semicolon at end of binary expression, got {:?}",
+                self.token()
+            ));
         }
-        self.step(); // Consume the return type and newline.
+        self.step(); // Consume the semicolon.
 
         return Ok(ast::Statement::FunctionDeclaration(
             ast::FunctionDeclaration {
@@ -337,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    fn fail_to_parse_let_statement_with_no_trailing_newline() {
+    fn fail_to_parse_let_statement_with_no_trailing_semicolon() {
         let input = "let x: int32 = 5";
         let tokens = Lexer::tokenize(input);
         let program = Parser::parse_program(&tokens);
@@ -346,14 +347,16 @@ mod tests {
                 panic!("Expected parse error");
             }
             Err(err) => {
-                assert!(err.message == "Missing newline after let statement");
+                assert!(err
+                    .message
+                    .starts_with("Expected semicolon at end of statement"));
             }
         }
     }
 
     #[test]
     fn test_matcher() {
-        let input = "x + y\n";
+        let input = "x + y;";
         let tokens = Lexer::tokenize(input);
         match Parser::parse_program(&tokens) {
             Ok(program) => {
@@ -388,35 +391,35 @@ mod tests {
     }
 
     parse_expression_test!(name:parse_binary_plus_expression_with_identifiers,
-                 input:"x + y\n",
+                 input:"x + y;",
                  matcher:match_binary_expression!(
                     match_identifier!("x"),
                     ast::BinaryOperator::Plus,
                     match_identifier!("y")));
 
     parse_expression_test!(name:parse_binary_plus_expression_with_integer_literals,
-                 input:"2 + 4\n",
+                 input:"2 + 4;",
                  matcher:match_binary_expression!(
                     match_integer_literal!("2"),
                     ast::BinaryOperator::Plus,
                     match_integer_literal!("4")));
 
     parse_expression_test!(name:parse_binary_minus_expression,
-        input:"2 - 4\n",
+        input:"2 - 4;",
         matcher:match_binary_expression!(
             match_any_expression!(),
             ast::BinaryOperator::Minus,
             match_any_expression!()));
 
     parse_expression_test!(name:parse_binary_star_expression,
-                input:"2 * 4\n",
+                input:"2 * 4;",
                 matcher:match_binary_expression!(
                     match_any_expression!(),
                     ast::BinaryOperator::Star,
                     match_any_expression!()));
 
     parse_expression_test!(name:parse_binary_divide_expression,
-                        input:"2 / 4\n",
+                        input:"2 / 4;",
                         matcher:match_binary_expression!(
                             match_any_expression!(),
                             ast::BinaryOperator::Divide,
@@ -437,7 +440,7 @@ mod tests {
 
     parse_statement_test! {
         name:parse_let_statement_with_integer_literal,
-        input:"let x: int32 = 5\n",
+        input:"let x: int32 = 5;",
         matcher:match_let_statement!(
             "x",
             match_type!(),
@@ -446,7 +449,7 @@ mod tests {
 
     parse_statement_test! {
         name:parse_let_statement_with_identifier,
-        input:"let x: int32 = y\n",
+        input:"let x: int32 = y;",
         matcher:match_let_statement!(
             "x",
             match_type!(),
@@ -455,7 +458,7 @@ mod tests {
 
     parse_statement_test! {
         name:parse_mutable_let_statement,
-        input:"let mut x: int32 = y\n",
+        input:"let mut x: int32 = y;",
         matcher:match_mutable_let_statement!(
             "x",
             match_type!(),
@@ -464,7 +467,7 @@ mod tests {
 
     parse_statement_test! {
         name:parse_function,
-        input:"fn five() -> int32\n",
+        input:"fn five() -> int32;",
         matcher:match_function_declaration!(
             "five",
             match_type!("int32"))

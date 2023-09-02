@@ -154,6 +154,8 @@ impl<'a> Lexer<'a> {
             Some(self.char_token(Kind::LeftBrace))
         } else if self.char() == '}' {
             Some(self.char_token(Kind::RightBrace))
+        } else if self.char() == ';' {
+            Some(self.char_token(Kind::Semicolon))
         } else {
             None
         };
