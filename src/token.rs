@@ -4,6 +4,7 @@ use std::str;
 pub enum Kind {
     Arrow,
     Colon,
+    Comma,
     Comment,
     DecimalLiteral,
     Divide,
@@ -42,8 +43,9 @@ pub enum Kind {
 }
 
 pub struct Token<'a> {
-    text: &'a [u8],
+    source: &'a [u8],
     offset: usize,
+    len: usize,
     kind: Kind,
 }
 
@@ -58,26 +60,44 @@ impl core::fmt::Debug for Token<'_> {
 }
 
 impl<'a> Token<'a> {
-    pub const fn new(text: &'a [u8], offset: usize, kind: Kind) -> Token<'a> {
-        Token { text, offset, kind }
+    pub const fn new(source: &'a [u8], offset: usize, len: usize, kind: Kind) -> Token<'a> {
+        Token {
+            source,
+            offset,
+            len,
+            kind,
+        }
     }
 
     pub const fn kind(&self) -> Kind {
         self.kind
     }
 
+    pub fn source(&self) -> &[u8] {
+        self.source
+    }
+
     pub fn text(&self) -> &str {
-        str::from_utf8(self.text).unwrap()
+        str::from_utf8(&self.source[self.offset..self.offset + self.len]).unwrap()
     }
 
     pub const fn offset(&self) -> usize {
         self.offset
     }
 
+    pub const fn len(&self) -> usize {
+        self.len
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        self.len > 0
+    }
+
     pub const fn end_of_file(offset: usize) -> Token<'static> {
         Token {
-            text: &[],
+            source: &[],
             offset,
+            len: 0,
             kind: Kind::EndOfFile,
         }
     }

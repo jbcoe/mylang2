@@ -1,0 +1,6 @@
+fn add(x:int32, y:int32) -> int32 {
+    x + y;
+}
+x = 5;
+y = 7;
+z = add(x,y);

@@ -67,7 +67,7 @@ impl<'a> Lexer<'a> {
 
     // Returns a token for a range of text.
     fn text_token(&self, start: usize, kind: Kind) -> Token<'a> {
-        Token::new(self.text_range(start), start, kind)
+        Token::new(self.input, start, self.read_position - start, kind)
     }
 
     // Attempts to read a whitespace token.
@@ -156,6 +156,8 @@ impl<'a> Lexer<'a> {
             Some(self.char_token(Kind::RightBrace))
         } else if self.char() == ';' {
             Some(self.char_token(Kind::Semicolon))
+        } else if self.char() == ',' {
+            Some(self.char_token(Kind::Comma))
         } else {
             None
         };
@@ -258,33 +260,30 @@ impl<'a> Lexer<'a> {
         tokens.push(t);
         tokens
     }
-
-    // Returns the 1-based row number of the given Token.
-    pub fn get_row(&self, token: &Token) -> usize {
-        assert!(token.kind() != Kind::EndOfFile);
-        assert!(token.offset() <= self.input.len());
-        let mut row = 1;
-        for c in self.input[..token.offset()].iter() {
-            if *c == b'\n' {
-                row += 1;
-            }
+}
+// Returns the 1-based line number of the given Token.
+pub fn get_line(token: &Token) -> usize {
+    assert!(token.kind() != Kind::EndOfFile);
+    let mut line = 1;
+    for c in token.source()[..token.offset()].iter() {
+        if *c == b'\n' {
+            line += 1;
         }
-        row
     }
+    line
+}
 
-    // Returns the 1-based column number of the given token.
-    pub fn get_column(&self, token: &Token) -> usize {
-        assert!(token.kind() != Kind::EndOfFile);
-        assert!(token.offset() <= self.input.len());
-        let mut column = 1;
-        for c in self.input[..token.offset()].iter().rev() {
-            if *c == b'\n' {
-                break;
-            }
-            column += 1;
+// Returns the 1-based column number of the given token.
+pub fn get_column(token: &Token) -> usize {
+    assert!(token.kind() != Kind::EndOfFile);
+    let mut column = 1;
+    for c in token.source()[..token.offset()].iter().rev() {
+        if *c == b'\n' {
+            break;
         }
-        column
+        column += 1;
     }
+    column
 }
 
 #[cfg(test)]
@@ -708,8 +707,8 @@ let z = x + y
         for (i, expected_token) in expected_tokens.iter().enumerate() {
             assert_eq!(tokens[i].text(), expected_token.0);
             assert_eq!(tokens[i].kind(), expected_token.1);
-            assert_eq!(lexer.get_row(&tokens[i]), expected_token.2);
-            assert_eq!(lexer.get_column(&tokens[i]), expected_token.3);
+            assert_eq!(get_line(&tokens[i]), expected_token.2);
+            assert_eq!(get_column(&tokens[i]), expected_token.3);
         }
     }
 }
