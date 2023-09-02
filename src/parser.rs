@@ -233,11 +233,7 @@ impl<'a> Parser<'a> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        ast::{self, Expression, Statement},
-        lexer::Lexer,
-        parser::Parser,
-    };
+    use crate::{ast, lexer::Lexer, match_binary_expression, matcher::*, parser::Parser, *};
 
     #[test]
     fn empty_file_can_be_parsed() {
@@ -256,79 +252,13 @@ mod tests {
         match program {
             Ok(program) => {
                 assert!(program.statements.len() == 1);
-                if let Statement::Let(let_stmt) = &program.statements[0] {
+                if let ast::Statement::Let(let_stmt) = &program.statements[0] {
                     assert_eq!(let_stmt.identifier.name, "x");
                     assert_eq!(let_stmt.ttype.name, "int32");
-                    if let Expression::IntegerLiteral(value) = &*let_stmt.expression {
+                    if let ast::Expression::IntegerLiteral(value) = &*let_stmt.expression {
                         assert_eq!(value.text, "5");
                     } else {
                         panic!("Expected integer literal");
-                    }
-                } else {
-                    panic!("Expected let statement");
-                }
-            }
-            Err(err) => panic!("Failed to parse program: {}", err.message),
-        }
-    }
-
-    #[test]
-    fn parse_binary_plus_expression_with_identifiers() {
-        let input = "x + y\n";
-        let tokens = Lexer::tokenize(input);
-        let program = Parser::parse_program(&tokens);
-        match program {
-            Ok(program) => {
-                assert!(program.statements.len() == 1);
-                if let Statement::Expression(expr) = &program.statements[0] {
-                    match expr {
-                        Expression::BinaryExpression(binary_expr) => {
-                            if let Expression::Identifier(lhs) = &*binary_expr.left {
-                                assert_eq!(lhs.name, "x");
-                            } else {
-                                panic!("Expected identifier, got {:?}", binary_expr.left);
-                            }
-                            if let Expression::Identifier(rhs) = &*binary_expr.right {
-                                assert_eq!(rhs.name, "y");
-                            } else {
-                                panic!("Expected identifier, got {:?}", binary_expr.right);
-                            }
-                            assert_eq!(binary_expr.operator, ast::BinaryOperator::Plus)
-                        }
-                        _ => panic!("Expected binary expression"),
-                    }
-                } else {
-                    panic!("Expected let statement");
-                }
-            }
-            Err(err) => panic!("Failed to parse program: {}", err.message),
-        }
-    }
-
-    #[test]
-    fn parse_binary_plus_expression_with_integer_literals() {
-        let input = "2 + 4\n";
-        let tokens = Lexer::tokenize(input);
-        let program = Parser::parse_program(&tokens);
-        match program {
-            Ok(program) => {
-                assert!(program.statements.len() == 1);
-                if let Statement::Expression(expr) = &program.statements[0] {
-                    match expr {
-                        Expression::BinaryExpression(binary_expr) => {
-                            if let Expression::IntegerLiteral(lhs) = &*binary_expr.left {
-                                assert_eq!(lhs.text, "2");
-                            } else {
-                                panic!("Expected integer literal, got {:?}", binary_expr.left);
-                            }
-                            if let Expression::IntegerLiteral(rhs) = &*binary_expr.right {
-                                assert_eq!(rhs.text, "4");
-                            } else {
-                                panic!("Expected integer literal, got {:?}", binary_expr.right);
-                            }
-                            assert_eq!(binary_expr.operator, ast::BinaryOperator::Plus)
-                        }
-                        _ => panic!("Expected binary expression"),
                     }
                 } else {
                     panic!("Expected let statement");
@@ -345,11 +275,59 @@ mod tests {
         let program = Parser::parse_program(&tokens);
         match program {
             Ok(_) => {
-                panic!("Expected parse error statement");
+                panic!("Expected parse error");
             }
             Err(err) => {
                 assert!(err.message == "Missing newline after let statement");
             }
         }
     }
+
+    macro_rules! parse_expression_test {
+        (name:$name:ident, input:$input:expr, matcher:$matcher:expr) => {
+            #[test]
+            fn $name() {
+                let tokens = Lexer::tokenize($input);
+                match Parser::parse_program(&tokens) {
+                    Ok(program) => {
+                        if let ast::Statement::Expression(expr) = &program.statements[0] {
+                            assert!($matcher.matches(expr));
+                        } else {
+                            panic!("Expected an expression statement");
+                        }
+                    }
+                    Err(err) => panic!("Failed to parse program: {}", err.message),
+                }
+            }
+        };
+    }
+
+    #[test]
+    fn test_matcher() {
+        let input = "x + y\n";
+        let tokens = Lexer::tokenize(input);
+        match Parser::parse_program(&tokens) {
+            Ok(program) => {
+                let matcher = match_binary_expression!();
+                if let ast::Statement::Expression(expr) = &program.statements[0] {
+                    assert!(matcher.matches(expr));
+                } else {
+                    panic!("Expected an expression statement");
+                }
+            }
+            Err(err) => panic!("Failed to parse program: {}", err.message),
+        }
+    }
+
+    parse_expression_test!(name:parse_binary_plus_expression_with_identifiers,
+                 input:"x + y\n",
+                 matcher:match_binary_expression!(match_identifier!("x"),
+                                                  ast::BinaryOperator::Plus,
+                                                  match_identifier!("y")));
+
+    parse_expression_test!(name:parse_binary_plus_expression_with_integer_literals,
+                 input:"2 + 4\n",
+                 matcher:match_binary_expression!(match_integer_literal!("2"),
+                                                  ast::BinaryOperator::Plus,
+                                                  match_integer_literal!("4")));
 }
