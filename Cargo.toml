@@ -16,12 +16,6 @@ test = false
 bench = false
 
 [[bin]]
-name = "format"
-src = "src/format.rs"
-test = false
-bench = false
-
-[[bin]]
 name = "lexer"
 src = "src/lexer.rs"
 test = false
