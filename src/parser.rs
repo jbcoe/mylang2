@@ -94,7 +94,9 @@ impl<'a> Parser<'a> {
 
         let ttype_token = self.token();
         let ttype = match ttype_token.kind() {
-            Kind::Int32 => ast::Type { name: "int32" },
+            Kind::Identifier => ast::Type {
+                name: ttype_token.text(),
+            },
             _ => {
                 self.reset(start);
                 return Err(format!("Expected type, got {:?}", colon));
@@ -244,9 +246,44 @@ impl<'a> Parser<'a> {
         }
         self.step(); // Consume the '(' token.
 
-        if self.token().kind() != Kind::RightParenthesis {
-            self.reset(start);
-            return Err(format!("Expected ')', got {:?}", self.token()));
+        // Parse the parameters.
+        let mut parameters = vec![];
+        while self.token().kind() != Kind::RightParenthesis {
+            let parameter_token = self.token();
+            if let Kind::Identifier = parameter_token.kind() {
+                let name = parameter_token.text();
+                self.step(); // Consume the identifier.
+
+                if self.token().kind() != Kind::Colon {
+                    self.reset(start);
+                    return Err(format!("Expected ':', got {:?}", self.token()));
+                }
+                self.step(); // Consume the colon.
+
+                let type_token = self.token();
+                if type_token.kind() != Kind::Identifier {
+                    self.reset(start);
+                    return Err(format!("Expected a type name, got {:?}", type_token));
+                }
+                let type_name = type_token.text();
+                self.step(); // Consume the type name.
+                parameters.push(ast::Parameter {
+                    identifier: ast::Indentifier { name },
+                    ttype: ast::Type { name: type_name },
+                });
+                if let Kind::Comma = self.token().kind() {
+                    self.step()
+                };
+            } else {
+                self.reset(start);
+                return Err(format!(
+                    "Expected identifier or ')', got {:?}",
+                    parameter_token
+                ));
+            };
+            if self.token().kind() == Kind::Comma {
+                self.step(); // Consume the ',' token.
+            }
         }
         self.step(); // Consume the ')' token.
 
@@ -257,10 +294,12 @@ impl<'a> Parser<'a> {
         self.step(); // Consume the '->' token.
 
         let return_type = match self.token().kind() {
-            Kind::Int32 => Type { name: "int32" },
+            Kind::Identifier => Type {
+                name: self.token().text(),
+            },
             _ => {
                 self.reset(start);
-                return Err(format!("Expected 'int32', got {:?}", self.token()));
+                return Err(format!("Expected type identifier, got {:?}", self.token()));
             }
         };
         self.step(); // Consume the return type.
@@ -277,8 +316,8 @@ impl<'a> Parser<'a> {
         return Ok(ast::Statement::FunctionDeclaration(
             ast::FunctionDeclaration {
                 identifier,
-                parameters: vec![],
-                ttype: return_type,
+                parameters,
+                return_type,
             },
         ));
     }
@@ -467,9 +506,10 @@ mod tests {
 
     parse_statement_test! {
         name:parse_function,
-        input:"fn five() -> int32;",
+        input:"fn max(x:int32, y:int32) -> int32;",
         matcher:match_function_declaration!(
-            "five",
+            "max",
+            vec![match_parameter!("x", "int32"), match_parameter!("y", "int32")],
             match_type!("int32"))
     }
 }

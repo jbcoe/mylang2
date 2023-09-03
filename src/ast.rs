@@ -15,7 +15,7 @@ pub struct Parameter<'a> {
 pub struct FunctionDeclaration<'a> {
     pub identifier: Indentifier<'a>,
     pub parameters: Vec<Parameter<'a>>,
-    pub ttype: Type<'a>,
+    pub return_type: Type<'a>,
 }
 
 #[derive(Debug)]

@@ -1,6 +1,6 @@
 #![macro_use]
 
-use crate::ast::{BinaryOperator, Expression, Statement, Type};
+use crate::ast::{BinaryOperator, Expression, Parameter, Statement, Type};
 
 pub trait ExpressionMatcher {
     fn matches(&self, expression: &Expression) -> bool;
@@ -8,6 +8,10 @@ pub trait ExpressionMatcher {
 
 pub trait StatementMatcher {
     fn matches(&self, statement: &Statement) -> bool;
+}
+
+pub trait ParameterMatcher {
+    fn matches(&self, parameter: &Parameter) -> bool;
 }
 
 pub trait TypeMatcher {
@@ -43,6 +47,39 @@ impl NamedTypeMatcher {
 impl TypeMatcher for NamedTypeMatcher {
     fn matches(&self, ttype: &Type) -> bool {
         ttype.name == self.name
+    }
+}
+
+pub struct AnyParameterMatcher {
+    _private: (),
+}
+
+impl AnyParameterMatcher {
+    pub fn new() -> Box<AnyParameterMatcher> {
+        Box::new(AnyParameterMatcher { _private: () })
+    }
+}
+
+impl ParameterMatcher for AnyParameterMatcher {
+    fn matches(&self, _parameter: &Parameter) -> bool {
+        true
+    }
+}
+
+pub struct NamedParameterMatcher {
+    identifier: String,
+    ttype: Box<dyn TypeMatcher>,
+}
+
+impl NamedParameterMatcher {
+    pub fn new(identifier: String, ttype: Box<dyn TypeMatcher>) -> Box<NamedParameterMatcher> {
+        Box::new(NamedParameterMatcher { identifier, ttype })
+    }
+}
+
+impl ParameterMatcher for NamedParameterMatcher {
+    fn matches(&self, parameter: &Parameter) -> bool {
+        self.identifier == parameter.identifier.name && self.ttype.matches(&parameter.ttype)
     }
 }
 
@@ -98,12 +135,22 @@ impl StatementMatcher for LetStatementMatcher {
 
 pub struct FunctionDeclarationMatcher {
     identifier: String,
-    ttype: Box<dyn TypeMatcher>,
+    parameters: Vec<Box<dyn ParameterMatcher>>,
+    return_type: Box<dyn TypeMatcher>,
 }
 
 impl FunctionDeclarationMatcher {
-    pub fn new(identifier: String, ttype: Box<dyn TypeMatcher>) -> Box<FunctionDeclarationMatcher> {
-        Box::new(FunctionDeclarationMatcher { identifier, ttype })
+    pub fn new(
+        identifier: String,
+        parameters: Vec<Box<dyn ParameterMatcher>>,
+        return_type: Box<dyn TypeMatcher>,
+    ) -> Box<FunctionDeclarationMatcher> {
+        dbg!(parameters.len());
+        Box::new(FunctionDeclarationMatcher {
+            identifier,
+            parameters,
+            return_type,
+        })
     }
 }
 
@@ -111,7 +158,9 @@ impl StatementMatcher for FunctionDeclarationMatcher {
     fn matches(&self, statement: &Statement) -> bool {
         matches!(statement, Statement::FunctionDeclaration(function_declaration) if {
             function_declaration.identifier.name == self.identifier
-                && self.ttype.matches(&function_declaration.ttype)
+                && self.return_type.matches(&function_declaration.return_type)
+                && function_declaration.parameters.len() == self.parameters.len()
+                && self.parameters.iter().zip(function_declaration.parameters.iter()).all(|(m, p)| m.matches(p))
         })
     }
 }
@@ -298,8 +347,8 @@ macro_rules! match_mutable_let_statement {
 
 #[macro_export]
 macro_rules! match_function_declaration {
-    ($identifier:literal, $ttype:expr) => {
-        FunctionDeclarationMatcher::new($identifier.to_string(), $ttype)
+    ($identifier:literal, $params:expr, $ttype:expr) => {
+        FunctionDeclarationMatcher::new($identifier.to_string(), $params, $ttype)
     };
 }
 
@@ -310,5 +359,15 @@ macro_rules! match_type {
     };
     () => {
         AnyTypeMatcher::new()
+    };
+}
+
+#[macro_export]
+macro_rules! match_parameter {
+    ($identifier:literal, $ttype:literal) => {
+        NamedParameterMatcher::new($identifier.to_string(), match_type!($ttype))
+    };
+    () => {
+        AnyParameterMatcher::new()
     };
 }

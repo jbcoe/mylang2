@@ -379,104 +379,11 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: let_statement_with_assignment_to_integer_i1,
-        input: "let x: int1 = 5",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int1", Kind::Int1),
-            ("=", Kind::EqualSign),
-            ("5", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: let_statement_with_assignment_to_integer_i2,
-        input: "let x: int2 = 5",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int2", Kind::Int2),
-            ("=", Kind::EqualSign),
-            ("5", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: let_statement_with_assignment_to_integer_i4,
-        input: "let x: int4 = 5",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int4", Kind::Int4),
-            ("=", Kind::EqualSign),
-            ("5", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: let_statement_with_assignment_to_integer_i8,
-        input: "let x: int8 = 5",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int8", Kind::Int8),
-            ("=", Kind::EqualSign),
-            ("5", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: let_statement_with_assignment_to_integer_i16,
-        input: "let x: int16 = 5",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int16", Kind::Int16),
-            ("=", Kind::EqualSign),
-            ("5", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: let_statement_with_assignment_to_integer_i32,
-        input: "let x: int32 = 5",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int32", Kind::Int32),
-            ("=", Kind::EqualSign),
-            ("5", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: let_statement_with_assignment_to_integer_i64,
-        input: "let x: int64 = 5",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int64", Kind::Int64),
-            ("=", Kind::EqualSign),
-            ("5", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
         name: let_statement_with_assignment_to_string,
-        input: r#"let x: int64 = "five""#,
+        input: r#"let x = "five""#,
         expected_tokens: &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("int64", Kind::Int64),
             ("=", Kind::EqualSign),
             ("five", Kind::String),
         ],
@@ -560,10 +467,10 @@ mod tests {
             ("(", Kind::LeftParenthesis),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
-            ("int32", Kind::Int32),
+            ("int32", Kind::Identifier),
             (")", Kind::RightParenthesis),
             ("->", Kind::Arrow),
-            ("int32", Kind::Int32),
+            ("int32", Kind::Identifier),
             ("{", Kind::LeftBrace),
             ("return", Kind::Return),
             ("x", Kind::Identifier),
@@ -580,46 +487,7 @@ mod tests {
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
-            ("float16", Kind::Float16),
-            ("=", Kind::EqualSign),
-            ("0", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: bfloat16,
-        input: "let x:bfloat16 = 0",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("bfloat16", Kind::BFloat16),
-            ("=", Kind::EqualSign),
-            ("0", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: float32,
-        input: "let x:float32 = 0",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("float32", Kind::Float32),
-            ("=", Kind::EqualSign),
-            ("0", Kind::IntegerLiteral),
-        ],
-    }
-
-    lexer_test_case! {
-        name: float64,
-        input: "let x:float64 = 0",
-        expected_tokens: &[
-            ("let", Kind::Let),
-            ("x", Kind::Identifier),
-            (":", Kind::Colon),
-            ("float64", Kind::Float64),
+            ("float16", Kind::Identifier),
             ("=", Kind::EqualSign),
             ("0", Kind::IntegerLiteral),
         ],
@@ -632,7 +500,7 @@ mod tests {
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
-            ("float64", Kind::Float64),
+            ("float64", Kind::Identifier),
             ("=", Kind::EqualSign),
             ("0", Kind::IntegerLiteral),
             ("# this is a comment", Kind::Comment),
@@ -646,7 +514,7 @@ mod tests {
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
-            ("float64", Kind::Float64),
+            ("float64", Kind::Identifier),
             ("=", Kind::EqualSign),
             ("0", Kind::IntegerLiteral),
             ("# this is not a comment", Kind::Unknown),
