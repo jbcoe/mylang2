@@ -3,7 +3,7 @@
 use crate::{
     ast::Program,
     ast::{
-        self, BinaryExpression, Expression, Indentifier, IntegerLiteral, LetStatement, Statement,
+        self, BinaryExpression, Expression, Identifier, IntegerLiteral, LetStatement, Statement,
         Type,
     },
     token::{Kind, Token},
@@ -75,7 +75,7 @@ impl<'a> Parser<'a> {
 
         let identifier_token = self.token();
         let identifier = match identifier_token.kind() {
-            Kind::Identifier => Indentifier {
+            Kind::Identifier => Identifier {
                 name: identifier_token.text(),
             },
             _ => {
@@ -119,7 +119,7 @@ impl<'a> Parser<'a> {
             Kind::IntegerLiteral => crate::ast::Expression::IntegerLiteral(IntegerLiteral {
                 text: expression_token.text(),
             }),
-            Kind::Identifier => crate::ast::Expression::Identifier(Indentifier {
+            Kind::Identifier => crate::ast::Expression::Identifier(Identifier {
                 name: expression_token.text(),
             }),
             _ => {
@@ -154,7 +154,7 @@ impl<'a> Parser<'a> {
         let left_token = self.token();
         let left = match left_token.kind() {
             Kind::Identifier => {
-                let id = Indentifier {
+                let id = Identifier {
                     name: left_token.text(),
                 };
                 Box::new(Expression::Identifier(id))
@@ -188,7 +188,7 @@ impl<'a> Parser<'a> {
         let right_token = self.token();
         let right = match right_token.kind() {
             Kind::Identifier => {
-                let id = Indentifier {
+                let id = Identifier {
                     name: right_token.text(),
                 };
                 Box::new(Expression::Identifier(id))
@@ -230,7 +230,7 @@ impl<'a> Parser<'a> {
 
         let identifier_token = self.token();
         let identifier = match identifier_token.kind() {
-            Kind::Identifier => Indentifier {
+            Kind::Identifier => Identifier {
                 name: identifier_token.text(),
             },
             _ => {
@@ -268,7 +268,7 @@ impl<'a> Parser<'a> {
                 let type_name = type_token.text();
                 self.step(); // Consume the type name.
                 parameters.push(ast::Parameter {
-                    identifier: ast::Indentifier { name },
+                    identifier: ast::Identifier { name },
                     ttype: ast::Type { name: type_name },
                 });
                 if let Kind::Comma = self.token().kind() {

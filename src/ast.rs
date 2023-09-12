@@ -7,13 +7,13 @@ pub enum Statement<'a> {
 
 #[derive(Debug)]
 pub struct Parameter<'a> {
-    pub identifier: Indentifier<'a>,
+    pub identifier: Identifier<'a>,
     pub ttype: Type<'a>,
 }
 
 #[derive(Debug)]
 pub struct FunctionDeclaration<'a> {
-    pub identifier: Indentifier<'a>,
+    pub identifier: Identifier<'a>,
     pub parameters: Vec<Parameter<'a>>,
     pub return_type: Type<'a>,
 }
@@ -21,7 +21,7 @@ pub struct FunctionDeclaration<'a> {
 #[derive(Debug)]
 pub enum Expression<'a> {
     IntegerLiteral(IntegerLiteral<'a>),
-    Identifier(Indentifier<'a>),
+    Identifier(Identifier<'a>),
     BinaryExpression(BinaryExpression<'a>),
 }
 
@@ -51,13 +51,13 @@ pub struct BinaryExpression<'a> {
 }
 
 #[derive(Debug)]
-pub struct Indentifier<'a> {
+pub struct Identifier<'a> {
     pub name: &'a str,
 }
 
 #[derive(Debug)]
 pub struct LetStatement<'a> {
-    pub identifier: Indentifier<'a>,
+    pub identifier: Identifier<'a>,
     pub ttype: Type<'a>,
     pub mutable: bool,
     pub expression: Box<Expression<'a>>,
