@@ -334,18 +334,6 @@ impl<'a> Parser<'a> {
         }
     }
 
-    // Reads the next statement and advances the parser.
-    //
-    // Returns an error if the statement cannot be parsed.
-    // The parser is not advanced if an error is returned.
-    fn next_stmt(&mut self) -> Result<Statement<'a>, String> {
-        let stmt = self.read_statement();
-        if stmt.is_ok() {
-            self.step();
-        }
-        stmt
-    }
-
     // Parses a program from tokens.
     //
     // Returns an error if the program cannot be parsed.
@@ -353,11 +341,10 @@ impl<'a> Parser<'a> {
         let mut parser = Parser::new(tokens);
         let mut statements = vec![];
         while parser.token().kind() != Kind::EndOfFile {
-            match parser.next_stmt() {
+            match parser.read_statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(message) => return Err(ParserError { message }),
             }
-            parser.step();
         }
         Ok(Program { statements })
     }
@@ -389,6 +376,18 @@ mod tests {
                 assert!(err
                     .message
                     .starts_with("Expected semicolon at end of statement"));
+            }
+        }
+    }
+    #[test]
+    fn multiple_statements_can_be_parsed() {
+        let input = "fn max() -> int32; fn min() -> int32; fn mean() -> float32;";
+        let tokens = Lexer::tokenize(input);
+        let program = Parser::parse_program(&tokens);
+        match program {
+            Ok(_) => {}
+            Err(_) => {
+                panic!("Failed to parse program");
             }
         }
     }
@@ -475,6 +474,21 @@ mod tests {
                 }
             }
         };
+        (name:$name:ident, input:$input:expr, matchers:$matchers:expr) => {
+            #[test]
+            fn $name() {
+                let tokens = Lexer::tokenize($input);
+                match Parser::parse_program(&tokens) {
+                    Ok(program) => {
+                        for (statement, matcher) in program.statements.iter().zip($matchers.iter())
+                        {
+                            assert!(matcher.matches(statement));
+                        }
+                    }
+                    Err(err) => panic!("Failed to parse program: {}", err.message),
+                }
+            }
+        };
     }
 
     parse_statement_test! {
@@ -488,7 +502,7 @@ mod tests {
 
     parse_statement_test! {
         name:parse_let_statement_with_identifier,
-        input:"let x: int32 = y;",
+        input:"let x: int32 = y; let x: int32 = y; let x: int32 = y;",
         matcher:match_let_statement!(
             "x",
             match_type!(),
@@ -511,5 +525,35 @@ mod tests {
             "max",
             vec![match_parameter!("x", "int32"), match_parameter!("y", "int32")],
             match_type!("int32"))
+    }
+
+    parse_statement_test! {
+        name:parse_function_with_no_parameters,
+        input:"fn max() -> int32;",
+        matcher:match_function_declaration!(
+            "max",
+            vec![],
+            match_type!("int32"))
+    }
+
+    parse_statement_test! {
+        name: parse_functions,
+        input:"fn max() -> int32;
+               fn min() -> int32; 
+               fn mean() -> float32;",
+        matchers: [
+            match_function_declaration!(
+                "max",
+                vec![],
+                match_type!("int32")),
+            match_function_declaration!(
+                "min",
+                vec![],
+                match_type!("int32")),
+            match_function_declaration!(
+                "mean",
+                vec![],
+                match_type!("float32")),
+            ]
     }
 }

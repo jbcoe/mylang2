@@ -145,7 +145,6 @@ impl FunctionDeclarationMatcher {
         parameters: Vec<Box<dyn ParameterMatcher>>,
         return_type: Box<dyn TypeMatcher>,
     ) -> Box<FunctionDeclarationMatcher> {
-        dbg!(parameters.len());
         Box::new(FunctionDeclarationMatcher {
             identifier,
             parameters,

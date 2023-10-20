@@ -217,7 +217,7 @@ impl<'a> Lexer<'a> {
     // Reads the next token unconditionally advancing the lexer.
     fn read_token(&mut self) -> Token<'a> {
         if self.char() == '\0' {
-            return Token::end_of_file(self.position);
+            Token::end_of_file(self.position)
         } else if let Some(t) = self.maybe_read_whitespace() {
             return t;
         } else if let Some(t) = self.maybe_read_comment() {
