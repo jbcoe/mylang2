@@ -17,19 +17,16 @@ pub struct ParserError {
 pub struct Parser<'a> {
     tokens: &'a [Token<'a>],
     position: usize,
-    read_position: usize,
 }
 
 impl<'a> Parser<'a> {
     fn new(tokens: &'a [Token]) -> Parser<'a> {
-        let mut parser = Parser {
+        let parser = Parser {
             tokens,
             position: 0,
-            read_position: 0,
         };
         assert!(!parser.tokens.is_empty());
         assert!(parser.tokens.last().unwrap().kind() == Kind::EndOfFile);
-        parser.step();
         parser
     }
 
@@ -40,28 +37,35 @@ impl<'a> Parser<'a> {
 
     // Advances the parser.
     fn step(&mut self) {
-        if self.read_position >= self.tokens.len() {
+        if self.position >= self.tokens.len() {
             return;
         }
-        self.position = self.read_position;
-        self.read_position += 1;
+        self.position += 1;
         // Ignore whitespace.
-        while self.token().kind() == Kind::Whitespace && self.read_position < self.tokens.len() {
-            self.position = self.read_position;
-            self.read_position += 1;
+        while self.token().kind() == Kind::Whitespace && self.position < self.tokens.len() {
+            self.position += 1;
         }
     }
 
     // Resets the parser to a previous position.
     fn reset(&mut self, position: usize) {
         self.position = position;
-        self.read_position = position + 1;
+    }
+
+    fn consume(&mut self, kind: Kind, start: usize) -> Result<(), String> {
+        let token = self.token();
+        if token.kind() == kind {
+            self.step();
+            Ok(())
+        } else {
+            self.reset(start);
+            Err(format!("Expected {:?}, got {:?}", kind, token))
+        }
     }
 
     fn try_parse_let_stmt(&mut self) -> Result<Statement<'a>, String> {
-        assert!(self.token().kind() == Kind::Let);
         let start = self.position;
-        self.step(); // Consume the "let" token.
+        self.consume(Kind::Let, start)?;
 
         // See if we have a `mut` keyword
         let mut_token = self.token();
@@ -84,13 +88,7 @@ impl<'a> Parser<'a> {
             }
         };
         self.step(); // Consume the identifier.
-
-        let colon = self.token();
-        if colon.kind() != Kind::Colon {
-            self.reset(start);
-            return Err(format!("Expected colon, got {:?}", colon));
-        }
-        self.step(); // Consume the colon.
+        self.consume(Kind::Colon, start)?;
 
         let ttype_token = self.token();
         let ttype = match ttype_token.kind() {
@@ -99,20 +97,12 @@ impl<'a> Parser<'a> {
             },
             _ => {
                 self.reset(start);
-                return Err(format!("Expected type, got {:?}", colon));
+                return Err(format!("Expected type, got {:?}", ttype_token));
             }
         };
         self.step(); // Consume the type.
 
-        let equals_token = self.token();
-        match equals_token.kind() {
-            Kind::EqualSign => (),
-            _ => {
-                self.reset(start);
-                return Err(format!("Expected equals, got {:?}", equals_token));
-            }
-        }
-        self.step(); // Consume the equals symbol.
+        self.consume(Kind::EqualSign, start)?;
 
         let expression_token = self.token();
         let expression = match expression_token.kind() {
@@ -132,14 +122,7 @@ impl<'a> Parser<'a> {
         };
         self.step(); // Consume the value.
 
-        if self.token().kind() != Kind::Semicolon {
-            self.reset(start);
-            return Err(format!(
-                "Expected semicolon at end of statement, got {:?}",
-                self.token()
-            ));
-        }
-        self.step(); // Consume the semicolon.
+        self.consume(Kind::Semicolon, start)?;
 
         Ok(ast::Statement::Let(LetStatement {
             identifier,
@@ -205,15 +188,7 @@ impl<'a> Parser<'a> {
             }
         };
         self.step(); // Consume the identifier.
-
-        if self.token().kind() != Kind::Semicolon {
-            self.reset(start);
-            return Err(format!(
-                "Expected semicolon at end of binary expression, got {:?}",
-                self.token()
-            ));
-        }
-        self.step(); // Consume the semicolon.
+        self.consume(Kind::Semicolon, start)?;
 
         let expression = Expression::BinaryExpression(BinaryExpression {
             operator,
@@ -225,8 +200,7 @@ impl<'a> Parser<'a> {
 
     fn try_parse_function(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
-        assert!(self.token().kind() == Kind::Fn);
-        self.step(); // Consume the "fn" token.
+        self.consume(Kind::Fn, start)?;
 
         let identifier_token = self.token();
         let identifier = match identifier_token.kind() {
@@ -240,11 +214,7 @@ impl<'a> Parser<'a> {
         };
         self.step(); // Consume the identifier.
 
-        if self.token().kind() != Kind::LeftParenthesis {
-            self.reset(start);
-            return Err(format!("Expected '(', got {:?}", self.token()));
-        }
-        self.step(); // Consume the '(' token.
+        self.consume(Kind::LeftParenthesis, start)?;
 
         // Parse the parameters.
         let mut parameters = vec![];
@@ -253,12 +223,7 @@ impl<'a> Parser<'a> {
             if let Kind::Identifier = parameter_token.kind() {
                 let name = parameter_token.text();
                 self.step(); // Consume the identifier.
-
-                if self.token().kind() != Kind::Colon {
-                    self.reset(start);
-                    return Err(format!("Expected ':', got {:?}", self.token()));
-                }
-                self.step(); // Consume the colon.
+                self.consume(Kind::Colon, start)?;
 
                 let type_token = self.token();
                 if type_token.kind() != Kind::Identifier {
@@ -272,7 +237,7 @@ impl<'a> Parser<'a> {
                     ttype: ast::Type { name: type_name },
                 });
                 if let Kind::Comma = self.token().kind() {
-                    self.step()
+                    self.step(); // Consume the comma.
                 };
             } else {
                 self.reset(start);
@@ -286,12 +251,7 @@ impl<'a> Parser<'a> {
             }
         }
         self.step(); // Consume the ')' token.
-
-        if self.token().kind() != Kind::Arrow {
-            self.reset(start);
-            return Err(format!("Expected '->', got {:?}", self.token()));
-        }
-        self.step(); // Consume the '->' token.
+        self.consume(Kind::Arrow, start)?;
 
         let return_type = match self.token().kind() {
             Kind::Identifier => Type {
@@ -303,15 +263,7 @@ impl<'a> Parser<'a> {
             }
         };
         self.step(); // Consume the return type.
-
-        if self.token().kind() != Kind::Semicolon {
-            self.reset(start);
-            return Err(format!(
-                "Expected semicolon at end of binary expression, got {:?}",
-                self.token()
-            ));
-        }
-        self.step(); // Consume the semicolon.
+        self.consume(Kind::Semicolon, start)?;
 
         return Ok(ast::Statement::FunctionDeclaration(
             ast::FunctionDeclaration {
@@ -375,7 +327,7 @@ mod tests {
             Err(err) => {
                 assert!(err
                     .message
-                    .starts_with("Expected semicolon at end of statement"));
+                    .eq("Expected Semicolon, got Token { text: \"<EOF>\", offset: 15, kind: EndOfFile }"));
             }
         }
     }

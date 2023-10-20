@@ -67,7 +67,10 @@ impl<'a> Token<'a> {
     }
 
     pub fn text(&self) -> &str {
-        str::from_utf8(&self.source[self.offset..self.offset + self.len]).unwrap()
+        match self.kind {
+            Kind::EndOfFile => "<EOF>",
+            _ => str::from_utf8(&self.source[self.offset..self.offset + self.len]).unwrap(),
+        }
     }
 
     pub const fn offset(&self) -> usize {
