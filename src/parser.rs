@@ -63,6 +63,17 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn consume_identifier_name(&mut self, start: usize) -> Result<&'a str, String> {
+        let token = self.token();
+        if token.kind() == Kind::Identifier {
+            self.step();
+            Ok(token.text())
+        } else {
+            self.reset(start);
+            Err(format!("Expected identifier, got {:?}", token))
+        }
+    }
+
     fn try_parse_let_stmt(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
         self.consume(Kind::Let, start)?;
@@ -77,30 +88,12 @@ impl<'a> Parser<'a> {
             _ => false,
         };
 
-        let identifier_token = self.token();
-        let identifier = match identifier_token.kind() {
-            Kind::Identifier => Identifier {
-                name: identifier_token.text(),
-            },
-            _ => {
-                self.reset(start);
-                return Err(format!("Expected identifier, got {:?}", identifier_token));
-            }
-        };
-        self.step(); // Consume the identifier.
+        let name = self.consume_identifier_name(start)?;
+        let identifier = Identifier { name };
         self.consume(Kind::Colon, start)?;
 
-        let ttype_token = self.token();
-        let ttype = match ttype_token.kind() {
-            Kind::Identifier => ast::Type {
-                name: ttype_token.text(),
-            },
-            _ => {
-                self.reset(start);
-                return Err(format!("Expected type, got {:?}", ttype_token));
-            }
-        };
-        self.step(); // Consume the type.
+        let type_name = self.consume_identifier_name(start)?;
+        let ttype = ast::Type { name: type_name };
 
         self.consume(Kind::EqualSign, start)?;
 
@@ -153,7 +146,7 @@ impl<'a> Parser<'a> {
                 return Err(format!("Expected identifier, got {:?}", left_token));
             }
         };
-        self.step(); // Consume the identifier.
+        self.step(); // Consume the identifier or literal.
 
         let op_token = self.token();
         let operator = match op_token.kind() {
@@ -163,7 +156,7 @@ impl<'a> Parser<'a> {
             Kind::Divide => ast::BinaryOperator::Divide,
             _ => {
                 self.reset(start);
-                return Err(format!("Expected '+', got {:?}", op_token));
+                return Err(format!("Expected a binary op, got {:?}", op_token));
             }
         };
         self.step(); // Consume the op symbol.
@@ -187,7 +180,7 @@ impl<'a> Parser<'a> {
                 return Err(format!("Expected identifier, got {:?}", right_token));
             }
         };
-        self.step(); // Consume the identifier.
+        self.step(); // Consume the identifier or literal.
         self.consume(Kind::Semicolon, start)?;
 
         let expression = Expression::BinaryExpression(BinaryExpression {
@@ -202,17 +195,8 @@ impl<'a> Parser<'a> {
         let start = self.position;
         self.consume(Kind::Fn, start)?;
 
-        let identifier_token = self.token();
-        let identifier = match identifier_token.kind() {
-            Kind::Identifier => Identifier {
-                name: identifier_token.text(),
-            },
-            _ => {
-                self.reset(start);
-                return Err(format!("Expected identifier, got {:?}", identifier_token));
-            }
-        };
-        self.step(); // Consume the identifier.
+        let name = self.consume_identifier_name(start)?;
+        let identifier = Identifier { name };
 
         self.consume(Kind::LeftParenthesis, start)?;
 
