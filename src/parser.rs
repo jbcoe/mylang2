@@ -277,6 +277,10 @@ impl<'a> Parser<'a> {
         let mut parser = Parser::new(tokens);
         let mut statements = vec![];
         while parser.token().kind() != Kind::EndOfFile {
+            if parser.token().kind() == Kind::Comment {
+                parser.step();
+                continue;
+            }
             match parser.read_statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(message) => return Err(ParserError { message }),
