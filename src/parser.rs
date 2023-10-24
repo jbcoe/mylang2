@@ -74,7 +74,37 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn try_parse_let_stmt(&mut self) -> Result<Statement<'a>, String> {
+    fn maybe_consume(&mut self, kind: Kind) {
+        let token = self.token();
+        if token.kind() == kind {
+            self.step();
+        }
+    }
+
+    fn parse_simple_expression(&mut self, start: usize) -> Result<Expression<'a>, String> {
+        let token = self.token();
+        match token.kind() {
+            Kind::Identifier => {
+                let id = Identifier { name: token.text() };
+                self.step(); // Consume the identifier.
+                Ok(Expression::Identifier(id))
+            }
+            Kind::IntegerLiteral => {
+                let literal = IntegerLiteral { text: token.text() };
+                self.step(); // Consume the integer literal.
+                Ok(Expression::IntegerLiteral(literal))
+            }
+            _ => {
+                self.reset(start);
+                Err(format!(
+                    "Expected identifier or integer literal, got {:?}",
+                    token
+                ))
+            }
+        }
+    }
+
+    fn parse_let_stmt(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
         self.consume(Kind::Let, start)?;
 
@@ -87,66 +117,28 @@ impl<'a> Parser<'a> {
             }
             _ => false,
         };
-
-        let name = self.consume_identifier_name(start)?;
-        let identifier = Identifier { name };
-        self.consume(Kind::Colon, start)?;
-
-        let type_name = self.consume_identifier_name(start)?;
-        let ttype = ast::Type { name: type_name };
-
-        self.consume(Kind::EqualSign, start)?;
-
-        let expression_token = self.token();
-        let expression = match expression_token.kind() {
-            Kind::IntegerLiteral => crate::ast::Expression::IntegerLiteral(IntegerLiteral {
-                text: expression_token.text(),
-            }),
-            Kind::Identifier => crate::ast::Expression::Identifier(Identifier {
-                name: expression_token.text(),
-            }),
-            _ => {
-                self.reset(start);
-                return Err(format!(
-                    "Expected integer literal or identifier, got {:?}",
-                    expression_token
-                ));
-            }
+        let identifier = Identifier {
+            name: self.consume_identifier_name(start)?,
         };
-        self.step(); // Consume the value.
-
+        self.consume(Kind::Colon, start)?;
+        let ttype = ast::Type {
+            name: self.consume_identifier_name(start)?,
+        };
+        self.consume(Kind::EqualSign, start)?;
+        let expression = Box::new(self.parse_simple_expression(start)?);
         self.consume(Kind::Semicolon, start)?;
 
         Ok(ast::Statement::Let(LetStatement {
             identifier,
             mutable,
             ttype,
-            expression: Box::new(expression),
+            expression,
         }))
     }
 
-    fn try_parse_binary_expression(&mut self) -> Result<Statement<'a>, String> {
+    fn parse_binary_expression(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
-        let left_token = self.token();
-        let left = match left_token.kind() {
-            Kind::Identifier => {
-                let id = Identifier {
-                    name: left_token.text(),
-                };
-                Box::new(Expression::Identifier(id))
-            }
-            Kind::IntegerLiteral => {
-                let literal = IntegerLiteral {
-                    text: left_token.text(),
-                };
-                Box::new(Expression::IntegerLiteral(literal))
-            }
-            _ => {
-                self.reset(start);
-                return Err(format!("Expected identifier, got {:?}", left_token));
-            }
-        };
-        self.step(); // Consume the identifier or literal.
+        let left = Box::new(self.parse_simple_expression(start)?);
 
         let op_token = self.token();
         let operator = match op_token.kind() {
@@ -161,37 +153,19 @@ impl<'a> Parser<'a> {
         };
         self.step(); // Consume the op symbol.
 
-        let right_token = self.token();
-        let right = match right_token.kind() {
-            Kind::Identifier => {
-                let id = Identifier {
-                    name: right_token.text(),
-                };
-                Box::new(Expression::Identifier(id))
-            }
-            Kind::IntegerLiteral => {
-                let literal = IntegerLiteral {
-                    text: right_token.text(),
-                };
-                Box::new(Expression::IntegerLiteral(literal))
-            }
-            _ => {
-                self.reset(start);
-                return Err(format!("Expected identifier, got {:?}", right_token));
-            }
-        };
-        self.step(); // Consume the identifier or literal.
+        let right = Box::new(self.parse_simple_expression(start)?);
         self.consume(Kind::Semicolon, start)?;
 
-        let expression = Expression::BinaryExpression(BinaryExpression {
-            operator,
-            left,
-            right,
-        });
-        Ok(ast::Statement::Expression(expression))
+        Ok(ast::Statement::Expression(Expression::BinaryExpression(
+            BinaryExpression {
+                operator,
+                left,
+                right,
+            },
+        )))
     }
 
-    fn try_parse_function(&mut self) -> Result<Statement<'a>, String> {
+    fn parse_function(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
         self.consume(Kind::Fn, start)?;
 
@@ -208,21 +182,12 @@ impl<'a> Parser<'a> {
                 let name = parameter_token.text();
                 self.step(); // Consume the identifier.
                 self.consume(Kind::Colon, start)?;
-
-                let type_token = self.token();
-                if type_token.kind() != Kind::Identifier {
-                    self.reset(start);
-                    return Err(format!("Expected a type name, got {:?}", type_token));
-                }
-                let type_name = type_token.text();
-                self.step(); // Consume the type name.
+                let type_name = self.consume_identifier_name(start)?;
                 parameters.push(ast::Parameter {
                     identifier: ast::Identifier { name },
                     ttype: ast::Type { name: type_name },
                 });
-                if let Kind::Comma = self.token().kind() {
-                    self.step(); // Consume the comma.
-                };
+                self.maybe_consume(Kind::Comma);
             } else {
                 self.reset(start);
                 return Err(format!(
@@ -230,9 +195,7 @@ impl<'a> Parser<'a> {
                     parameter_token
                 ));
             };
-            if self.token().kind() == Kind::Comma {
-                self.step(); // Consume the ',' token.
-            }
+            self.maybe_consume(Kind::Comma);
         }
         self.step(); // Consume the ')' token.
         self.consume(Kind::Arrow, start)?;
@@ -259,13 +222,13 @@ impl<'a> Parser<'a> {
     }
 
     // Reads the next statement.
-    fn read_statement(&mut self) -> Result<Statement<'a>, String> {
+    fn parse_statement(&mut self) -> Result<Statement<'a>, String> {
         let token = self.token();
         match token.kind() {
-            Kind::Let => self.try_parse_let_stmt(),
-            Kind::Identifier => self.try_parse_binary_expression(),
-            Kind::IntegerLiteral => self.try_parse_binary_expression(),
-            Kind::Fn => self.try_parse_function(),
+            Kind::Let => self.parse_let_stmt(),
+            Kind::Identifier => self.parse_binary_expression(),
+            Kind::IntegerLiteral => self.parse_binary_expression(),
+            Kind::Fn => self.parse_function(),
             _ => Err(format!("Failed to parse token {:?}", token)),
         }
     }
@@ -281,7 +244,7 @@ impl<'a> Parser<'a> {
                 parser.step();
                 continue;
             }
-            match parser.read_statement() {
+            match parser.parse_statement() {
                 Ok(stmt) => statements.push(stmt),
                 Err(message) => return Err(ParserError { message }),
             }
