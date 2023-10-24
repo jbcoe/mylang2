@@ -484,26 +484,22 @@ mod tests {
         "fn max() -> int32;",
         match_function_declaration!(
             "max",
-            vec![],
             match_type!("int32"))
     }
 
     parse_statement_test! {
         parse_functions,
         "fn max() -> int32;
-               fn min() -> int32; 
-               fn mean() -> float32;",
-            match_function_declaration!(
-                "max",
-                vec![],
-                match_type!("int32")),
-            match_function_declaration!(
-                "min",
-                vec![],
-                match_type!("int32")),
-            match_function_declaration!(
-                "mean",
-                vec![],
-                match_type!("float32"))
+        fn min() -> int32; 
+        fn mean() -> float32;",
+        match_function_declaration!(
+            "max",
+            match_type!("int32")),
+        match_function_declaration!(
+            "min",
+            match_type!("int32")),
+        match_function_declaration!(
+            "mean",
+            match_type!("float32"))
     }
 }

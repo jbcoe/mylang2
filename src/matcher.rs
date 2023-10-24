@@ -349,6 +349,9 @@ macro_rules! match_function_declaration {
     ($identifier:literal, $params:expr, $ttype:expr) => {
         FunctionDeclarationMatcher::new($identifier.to_string(), $params, $ttype)
     };
+    ($identifier:literal, $ttype:expr) => {
+        FunctionDeclarationMatcher::new($identifier.to_string(), vec![], $ttype)
+    };
 }
 
 #[macro_export]
