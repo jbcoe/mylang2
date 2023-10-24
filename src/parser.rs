@@ -350,79 +350,91 @@ mod tests {
     }
 
     macro_rules! parse_expression_test {
-        (name:$name:ident, input:$input:expr, matcher:$matcher:expr) => {
+        ($name:ident, $input:expr, $($m:expr),+) => {
             #[test]
             fn $name() {
                 let tokens = Lexer::tokenize($input);
+                let matchers = vec![$($m),+];
                 match Parser::parse_program(&tokens) {
-                    Ok(program) => {
-                        if let ast::Statement::Expression(expr) = &program.statements[0] {
-                            assert!($matcher.matches(expr));
-                        } else {
-                            panic!("Expected an expression statement");
+                    Ok(program) =>{
+                        for (statement, matcher) in program.statements.iter().zip(matchers.iter())
+                        {
+                            if let ast::Statement::Expression(expr) = statement {
+                                assert!(matcher.matches(expr),
+                                        "Matcher failed to match expression {:?}", expr);
+                            } else {
+                                panic!("Expected an expression statement");
+                            }
                         }
-                    }
+                    },
                     Err(err) => panic!("Failed to parse program: {}", err.message),
                 }
             }
         };
     }
 
-    parse_expression_test!(name:parse_binary_plus_expression_with_identifiers,
-                 input:"x + y;",
-                 matcher:match_binary_expression!(
-                    match_identifier!("x"),
-                    ast::BinaryOperator::Plus,
-                    match_identifier!("y")));
+    parse_expression_test!(
+        parse_binary_plus_expression_with_identifiers,
+        "x + y;",
+        match_binary_expression!(
+            match_identifier!("x"),
+            ast::BinaryOperator::Plus,
+            match_identifier!("y")
+        )
+    );
 
-    parse_expression_test!(name:parse_binary_plus_expression_with_integer_literals,
-                 input:"2 + 4;",
-                 matcher:match_binary_expression!(
-                    match_integer_literal!("2"),
-                    ast::BinaryOperator::Plus,
-                    match_integer_literal!("4")));
+    parse_expression_test!(
+        parse_binary_plus_expression_with_integer_literals,
+        "2 + 4;",
+        match_binary_expression!(
+            match_integer_literal!("2"),
+            ast::BinaryOperator::Plus,
+            match_integer_literal!("4")
+        )
+    );
 
-    parse_expression_test!(name:parse_binary_minus_expression,
-        input:"2 - 4;",
-        matcher:match_binary_expression!(
+    parse_expression_test!(
+        parse_binary_minus_expression,
+        "2 - 4;",
+        match_binary_expression!(
             match_any_expression!(),
             ast::BinaryOperator::Minus,
-            match_any_expression!()));
+            match_any_expression!()
+        )
+    );
 
-    parse_expression_test!(name:parse_binary_star_expression,
-                input:"2 * 4;",
-                matcher:match_binary_expression!(
-                    match_any_expression!(),
-                    ast::BinaryOperator::Star,
-                    match_any_expression!()));
+    parse_expression_test!(
+        parse_binary_star_expression,
+        "2 * 4;",
+        match_binary_expression!(
+            match_any_expression!(),
+            ast::BinaryOperator::Star,
+            match_any_expression!()
+        )
+    );
 
-    parse_expression_test!(name:parse_binary_divide_expression,
-                        input:"2 / 4;",
-                        matcher:match_binary_expression!(
-                            match_any_expression!(),
-                            ast::BinaryOperator::Divide,
-                            match_any_expression!()));
+    parse_expression_test!(
+        parse_binary_divide_expression,
+        "2 / 4;",
+        match_binary_expression!(
+            match_any_expression!(),
+            ast::BinaryOperator::Divide,
+            match_any_expression!()
+        )
+    );
 
     macro_rules! parse_statement_test {
-        (name:$name:ident, input:$input:expr, matcher:$matcher:expr) => {
+        ($name:ident, $input:expr, $($m:expr),+) => {
             #[test]
             fn $name() {
                 let tokens = Lexer::tokenize($input);
-                match Parser::parse_program(&tokens) {
-                    Ok(program) => assert!($matcher.matches(&program.statements[0])),
-                    Err(err) => panic!("Failed to parse program: {}", err.message),
-                }
-            }
-        };
-        (name:$name:ident, input:$input:expr, matchers:$matchers:expr) => {
-            #[test]
-            fn $name() {
-                let tokens = Lexer::tokenize($input);
+                let matchers = vec![$($m),+];
                 match Parser::parse_program(&tokens) {
                     Ok(program) => {
-                        for (statement, matcher) in program.statements.iter().zip($matchers.iter())
+                        for (statement, matcher) in program.statements.iter().zip(matchers.iter())
                         {
-                            assert!(matcher.matches(statement));
+                            assert!(matcher.matches(statement),
+                                    "Matcher failed to match expression {:?}", statement);
                         }
                     }
                     Err(err) => panic!("Failed to parse program: {}", err.message),
@@ -432,56 +444,55 @@ mod tests {
     }
 
     parse_statement_test! {
-        name:parse_let_statement_with_integer_literal,
-        input:"let x: int32 = 5;",
-        matcher:match_let_statement!(
+        parse_let_statement_with_integer_literal,
+        "let x: int32 = 5;",
+        match_let_statement!(
             "x",
             match_type!(),
             match_integer_literal!("5"))
     }
 
     parse_statement_test! {
-        name:parse_let_statement_with_identifier,
-        input:"let x: int32 = y; let x: int32 = y; let x: int32 = y;",
-        matcher:match_let_statement!(
+        parse_let_statement_with_identifier,
+        "let x: int32 = y; let x: int32 = y; let x: int32 = y;",
+        match_let_statement!(
             "x",
             match_type!(),
             match_identifier!("y"))
     }
 
     parse_statement_test! {
-        name:parse_mutable_let_statement,
-        input:"let mut x: int32 = y;",
-        matcher:match_mutable_let_statement!(
+        parse_mutable_let_statement,
+        "let mut x: int32 = y;",
+        match_mutable_let_statement!(
             "x",
             match_type!(),
             match_any_expression!())
     }
 
     parse_statement_test! {
-        name:parse_function,
-        input:"fn max(x:int32, y:int32) -> int32;",
-        matcher:match_function_declaration!(
+        parse_function,
+        "fn max(x:int32, y:int32) -> int32;",
+        match_function_declaration!(
             "max",
             vec![match_parameter!("x", "int32"), match_parameter!("y", "int32")],
             match_type!("int32"))
     }
 
     parse_statement_test! {
-        name:parse_function_with_no_parameters,
-        input:"fn max() -> int32;",
-        matcher:match_function_declaration!(
+        parse_function_with_no_parameters,
+        "fn max() -> int32;",
+        match_function_declaration!(
             "max",
             vec![],
             match_type!("int32"))
     }
 
     parse_statement_test! {
-        name: parse_functions,
-        input:"fn max() -> int32;
+        parse_functions,
+        "fn max() -> int32;
                fn min() -> int32; 
                fn mean() -> float32;",
-        matchers: [
             match_function_declaration!(
                 "max",
                 vec![],
@@ -493,7 +504,6 @@ mod tests {
             match_function_declaration!(
                 "mean",
                 vec![],
-                match_type!("float32")),
-            ]
+                match_type!("float32"))
     }
 }

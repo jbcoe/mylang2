@@ -291,7 +291,7 @@ mod tests {
     use super::*;
 
     macro_rules! lexer_test_case {
-        ( name: $test_name:ident, input: $input:expr, expected_tokens:$expected_tokens:expr,) => {
+        ( $test_name:ident, $input:expr, $expected_tokens:expr,) => {
             #[test]
             fn $test_name() {
                 let mut lexer = Lexer::new($input);
@@ -306,7 +306,7 @@ mod tests {
                 assert_eq!(lexer.next_token().kind(), Kind::EndOfFile);
             }
         };
-        ( name: $test_name:ident, input: $input:expr, expected_tokens:$expected_tokens:expr, check_whitespace: true,) => {
+        ( $test_name:ident, $input:expr, $expected_tokens:expr, check_whitespace: true,) => {
             #[test]
             fn $test_name() {
                 let mut lexer = Lexer::new($input);
@@ -321,44 +321,44 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: single_space,
-        input: " ",
-        expected_tokens: &[
+        single_space,
+        " ",
+        &[
             (" ", Kind::Whitespace),
         ],
         check_whitespace: true,
     }
 
     lexer_test_case! {
-        name: space_and_tab,
-        input: " \t",
-        expected_tokens: &[
+        space_and_tab,
+        " \t",
+        &[
             (" \t", Kind::Whitespace),
         ],
         check_whitespace: true,
     }
 
     lexer_test_case! {
-        name: let_keyword,
-        input: "let",
-        expected_tokens: &[
+        let_keyword,
+        "let",
+        &[
             ("let", Kind::Let),
         ],
     }
 
     lexer_test_case! {
-        name: let_statement,
-        input: "let x",
-        expected_tokens: &[
+        let_statement,
+        "let x",
+        &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
         ],
     }
 
     lexer_test_case! {
-        name: let_statement_with_assignment_to_integer,
-        input: "let x = 5",
-        expected_tokens: &[
+        let_statement_with_assignment_to_integer,
+        "let x = 5",
+        &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             ("=", Kind::EqualSign),
@@ -367,9 +367,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: let_statement_with_assignment_to_mutable_integer,
-        input: "let mut x = 5",
-        expected_tokens: &[
+        let_statement_with_assignment_to_mutable_integer,
+        "let mut x = 5",
+        &[
             ("let", Kind::Let),
             ("mut", Kind::Mut),
             ("x", Kind::Identifier),
@@ -379,9 +379,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: let_statement_with_assignment_to_string,
-        input: r#"let x = "five""#,
-        expected_tokens: &[
+        let_statement_with_assignment_to_string,
+        r#"let x = "five""#,
+        &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             ("=", Kind::EqualSign),
@@ -390,23 +390,23 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: incomplete_string,
-        input: r#""oops"#,
-        expected_tokens: &[
+        incomplete_string,
+        r#""oops"#,
+        &[
             (r#""oops"#, Kind::Unknown),
         ],
     }
 
     lexer_test_case! {
-        name: empty_input,
-        input: "",
-        expected_tokens: Vec::<(String, Kind)>::new(),
+        empty_input,
+        "",
+        Vec::<(String, Kind)>::new(),
     }
 
     lexer_test_case! {
-        name: plus,
-        input: "4 + 1",
-        expected_tokens: &[
+        plus,
+        "4 + 1",
+        &[
             ("4", Kind::IntegerLiteral),
             ("+", Kind::Plus),
             ("1", Kind::IntegerLiteral),
@@ -414,9 +414,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: minus,
-        input: "4 - 1",
-        expected_tokens: &[
+        minus,
+        "4 - 1",
+        &[
             ("4", Kind::IntegerLiteral),
             ("-", Kind::Minus),
             ("1", Kind::IntegerLiteral),
@@ -424,9 +424,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: divide,
-        input: "4 / 2",
-        expected_tokens: &[
+        divide,
+        "4 / 2",
+        &[
             ("4", Kind::IntegerLiteral),
             ("/", Kind::Divide),
             ("2", Kind::IntegerLiteral),
@@ -434,9 +434,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: multiply,
-        input: "4 * 2",
-        expected_tokens: &[
+        multiply,
+        "4 * 2",
+        &[
             ("4", Kind::IntegerLiteral),
             ("*", Kind::Star),
             ("2", Kind::IntegerLiteral),
@@ -444,9 +444,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: braces_brackets_and_parens,
-        input: "()[]{}",
-        expected_tokens: &[
+        braces_brackets_and_parens,
+        "()[]{}",
+        &[
             ("(", Kind::LeftParenthesis),
             (")", Kind::RightParenthesis),
             ("[", Kind::LeftSquareBracket),
@@ -457,11 +457,11 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: fn_keyword_arrow_and_return,
-        input: "fn sq(x: int32) -> int32 {
+        fn_keyword_arrow_and_return,
+        "fn sq(x: int32) -> int32 {
             return x * x
         }",
-        expected_tokens: &[
+        &[
             ("fn", Kind::Fn),
             ("sq", Kind::Identifier),
             ("(", Kind::LeftParenthesis),
@@ -481,9 +481,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: float16,
-        input: "let x:float16 = 0",
-        expected_tokens: &[
+        float16,
+        "let x:float16 = 0",
+        &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
@@ -494,9 +494,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: comment,
-        input: "let x:float64 = 0 # this is a comment\n",
-        expected_tokens: &[
+        comment,
+        "let x:float64 = 0 # this is a comment\n",
+        &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
@@ -508,9 +508,9 @@ mod tests {
     }
 
     lexer_test_case! {
-        name: comment_no_newline,
-        input: "let x:float64 = 0 # this is not a comment",
-        expected_tokens: &[
+        comment_no_newline,
+        "let x:float64 = 0 # this is not a comment",
+        &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
