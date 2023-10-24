@@ -18,22 +18,6 @@ pub trait TypeMatcher {
     fn matches(&self, ttype: &Type) -> bool;
 }
 
-pub struct AnyTypeMatcher {
-    _private: (),
-}
-
-impl AnyTypeMatcher {
-    pub fn new() -> Box<AnyTypeMatcher> {
-        Box::new(AnyTypeMatcher { _private: () })
-    }
-}
-
-impl TypeMatcher for AnyTypeMatcher {
-    fn matches(&self, _ttype: &Type) -> bool {
-        true
-    }
-}
-
 pub struct NamedTypeMatcher {
     name: String,
 }
@@ -50,17 +34,35 @@ impl TypeMatcher for NamedTypeMatcher {
     }
 }
 
-pub struct AnyParameterMatcher {
+pub struct AnyMatcher {
     _private: (),
 }
 
-impl AnyParameterMatcher {
-    pub fn new() -> Box<AnyParameterMatcher> {
-        Box::new(AnyParameterMatcher { _private: () })
+impl AnyMatcher {
+    pub fn new() -> Box<AnyMatcher> {
+        Box::new(AnyMatcher { _private: () })
     }
 }
 
-impl ParameterMatcher for AnyParameterMatcher {
+impl TypeMatcher for AnyMatcher {
+    fn matches(&self, _ttype: &Type) -> bool {
+        true
+    }
+}
+
+impl StatementMatcher for AnyMatcher {
+    fn matches(&self, _statement: &Statement) -> bool {
+        true
+    }
+}
+
+impl ExpressionMatcher for AnyMatcher {
+    fn matches(&self, _expression: &Expression) -> bool {
+        true
+    }
+}
+
+impl ParameterMatcher for AnyMatcher {
     fn matches(&self, _parameter: &Parameter) -> bool {
         true
     }
@@ -80,22 +82,6 @@ impl NamedParameterMatcher {
 impl ParameterMatcher for NamedParameterMatcher {
     fn matches(&self, parameter: &Parameter) -> bool {
         self.identifier == parameter.identifier.name && self.ttype.matches(&parameter.ttype)
-    }
-}
-
-pub struct AnyStatementMatcher {
-    _private: (),
-}
-
-impl AnyStatementMatcher {
-    pub fn new() -> Box<AnyStatementMatcher> {
-        Box::new(AnyStatementMatcher { _private: () })
-    }
-}
-
-impl StatementMatcher for AnyStatementMatcher {
-    fn matches(&self, _statement: &Statement) -> bool {
-        true
     }
 }
 
@@ -161,22 +147,6 @@ impl StatementMatcher for FunctionDeclarationMatcher {
                 && function_declaration.parameters.len() == self.parameters.len()
                 && self.parameters.iter().zip(function_declaration.parameters.iter()).all(|(m, p)| m.matches(p))
         })
-    }
-}
-
-pub struct AnyExpressionMatcher {
-    _private: (),
-}
-
-impl AnyExpressionMatcher {
-    pub fn new() -> Box<AnyExpressionMatcher> {
-        Box::new(AnyExpressionMatcher { _private: () })
-    }
-}
-
-impl ExpressionMatcher for AnyExpressionMatcher {
-    fn matches(&self, _expression: &Expression) -> bool {
-        true
     }
 }
 
@@ -319,7 +289,7 @@ macro_rules! match_binary_expression {
 #[macro_export]
 macro_rules! match_any_expression {
     () => {
-        AnyExpressionMatcher::new()
+        AnyMatcher::new()
     };
 }
 
@@ -360,7 +330,7 @@ macro_rules! match_type {
         NamedTypeMatcher::new($name.to_string())
     };
     () => {
-        AnyTypeMatcher::new()
+        AnyMatcher::new()
     };
 }
 
@@ -370,6 +340,6 @@ macro_rules! match_parameter {
         NamedParameterMatcher::new($identifier.to_string(), match_type!($ttype))
     };
     () => {
-        AnyParameterMatcher::new()
+        AnyMatcher::new()
     };
 }
