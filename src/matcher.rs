@@ -197,6 +197,7 @@ impl ExpressionMatcher for IntegerLiteralMatcher {
         matches!(expression, Expression::IntegerLiteral(i) if i.text == self.identifier)
     }
 }
+
 pub struct AnyIntegerLiteralMatcher {
     _private: (),
 }
@@ -242,6 +243,7 @@ impl ExpressionMatcher for BinaryExpressionMatcher {
         })
     }
 }
+
 pub struct AnyBinaryExpressionMatcher {}
 
 impl AnyBinaryExpressionMatcher {
