@@ -187,7 +187,6 @@ impl<'a> Parser<'a> {
                     identifier: ast::Identifier { name },
                     ttype: ast::Type { name: type_name },
                 });
-                self.maybe_consume(Kind::Comma);
             } else {
                 self.reset(start);
                 return Err(format!(
