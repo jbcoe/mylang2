@@ -49,11 +49,8 @@ pub struct AddOperation {
 }
 
 impl AddOperation {
-    pub fn new(operand0: Value, operand1: Value, result: Value) -> Self {
-        Self {
-            operands: [operand0, operand1],
-            result,
-        }
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
     }
 }
 
@@ -79,6 +76,45 @@ impl Operation for AddOperation {
     fn fmt(&self) -> String {
         format!(
             "AddOperation({}, {}) -> {}",
+            self.operands[0], self.operands[1], self.result
+        )
+    }
+}
+
+#[non_exhaustive]
+pub struct MultiplyOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl MultiplyOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for MultiplyOperation {
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn fmt(&self) -> String {
+        format!(
+            "MultiplyOperation({}, {}) -> {}",
             self.operands[0], self.operands[1], self.result
         )
     }
@@ -155,12 +191,12 @@ impl Function {
         for block in &self.blocks {
             block.validate()?;
         }
-        let fast_values: HashSet<Value> = self.values.iter().cloned().collect();
+        let owned_values: HashSet<Value> = self.values.iter().cloned().collect();
 
         // Ensure that all block arguments are owned by the Function.
         for (block_idx, block) in self.blocks.iter().enumerate() {
             for arg in &block.arguments {
-                if !fast_values.contains(arg) {
+                if !owned_values.contains(arg) {
                     return Err(format!(
                         "Block {:?} argument {:?} not owned by Function",
                         block_idx, arg
@@ -173,7 +209,7 @@ impl Function {
         for (block_idx, block) in self.blocks.iter().enumerate() {
             for (operation_idx, operation) in block.operations.iter().enumerate() {
                 for arg in operation.operands() {
-                    if !fast_values.contains(arg) {
+                    if !owned_values.contains(arg) {
                         return Err(format!(
                             "Block {:?} Operation {:?} argument {:?} not owned by Function",
                             block_idx, operation_idx, arg
@@ -181,7 +217,7 @@ impl Function {
                     }
                 }
                 if let Some(result) = operation.result() {
-                    if !fast_values.contains(&result) {
+                    if !owned_values.contains(&result) {
                         return Err(format!(
                             "Block {:?} Operation {:?} result {:?} not owned by Function",
                             block_idx, operation_idx, result
@@ -198,9 +234,8 @@ impl Function {
 
 #[cfg(test)]
 mod tests {
-    use crate::ir::{Operation, Type, Value};
 
-    use super::{Block, Function};
+    use crate::ir::{AddOperation, Block, Function, MultiplyOperation, Operation, Type, Value};
 
     #[test]
     fn check_api_create_single_function_within_block() {
@@ -215,7 +250,7 @@ mod tests {
         block.add_argument(arg1);
 
         let arg2 = function.new_value(Type::I32);
-        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        let add_op = Box::new(AddOperation::new([arg0, arg1], arg2));
         block.add_operation(add_op);
 
         function.add_block(block);
@@ -245,7 +280,7 @@ mod tests {
         block.add_argument(arg1);
 
         let arg2 = function.new_value(Type::I32);
-        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        let add_op = Box::new(AddOperation::new([arg0, arg1], arg2));
         block.add_operation(add_op);
 
         function.add_block(block);
@@ -266,9 +301,8 @@ mod tests {
         block.add_argument(arg1);
 
         let arg2 = function.new_value(Type::I32);
-        let add_op = Box::new(super::AddOperation::new(
-            arg0,
-            Value::create_orphan(Type::I32),
+        let add_op = Box::new(AddOperation::new(
+            [arg0, Value::create_orphan(Type::I32)],
             arg2,
         ));
         block.add_operation(add_op);
@@ -291,7 +325,7 @@ mod tests {
         block.add_argument(arg1);
 
         let arg2 = Value::create_orphan(Type::I32);
-        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        let add_op = Box::new(AddOperation::new([arg0, arg1], arg2));
         block.add_operation(add_op);
 
         function.add_block(block);
@@ -312,7 +346,7 @@ mod tests {
         block.add_argument(arg1);
 
         let arg2 = Value::create_orphan(Type::I32);
-        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        let add_op = Box::new(AddOperation::new([arg0, arg1], arg2));
         block.add_operation(add_op);
 
         function.add_block(block);
@@ -334,7 +368,50 @@ mod tests {
             id: 2,
             ttype: Type::I32,
         };
-        let add_op = super::AddOperation::new(arg0, arg1, result);
+        let add_op = AddOperation::new([arg0, arg1], result);
         assert!(add_op.fmt() == "AddOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_multiply_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let add_op = MultiplyOperation::new([arg0, arg1], result);
+        assert!(add_op.fmt() == "MultiplyOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn check_api_create_multiply_add_within_block() {
+        let mut function = Function::new("main".to_string());
+
+        // Add three block arguments
+        let arg0 = function.new_value(Type::I32);
+        let arg1 = function.new_value(Type::I32);
+        let arg2 = function.new_value(Type::I32);
+
+        let mut block = Block::default();
+        block.add_argument(arg0);
+        block.add_argument(arg1);
+
+        let multiply_result = function.new_value(Type::I32);
+        let mul_op = Box::new(MultiplyOperation::new([arg0, arg1], multiply_result));
+        block.add_operation(mul_op);
+        let add_result = function.new_value(Type::I32);
+        let add_op = Box::new(AddOperation::new([multiply_result, arg2], add_result));
+        block.add_operation(add_op);
+        function.add_block(block);
+
+        assert!(function.name == "main");
+        assert!(function.validate().is_ok());
     }
 }
