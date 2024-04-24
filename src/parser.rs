@@ -452,7 +452,7 @@ mod tests {
     parse_statement_test! {
         parse_functions,
         "fn max() -> int32;
-        fn min() -> int32; 
+        fn min() -> int32;
         fn mean() -> float32;",
         match_function_declaration!(
             "max",
