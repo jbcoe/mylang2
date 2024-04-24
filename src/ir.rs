@@ -1,138 +1,340 @@
 // An SSA-based Intermediate Representation inspired by
 // https://mlir.llvm.org/docs/LangRef
 
-pub struct Block {
-    pub id: String,
-    pub arguments: Vec<Value>,
-    pub operations: Vec<Box<dyn Operation>>,
+use std::collections::HashSet;
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[non_exhaustive]
+pub enum Type {
+    I32,
+    F32,
+    F64,
+    Bool,
 }
 
-impl Block {
-    pub fn new(id: &str) -> Block {
-        Block {
-            id: id.to_string(),
-            arguments: Vec::new(),
-            operations: Vec::new(),
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[non_exhaustive]
+pub struct Value {
+    pub id: usize,
+    pub ttype: Type,
+}
+
+impl Value {
+    // Create a test-only value that does not belong to any Function.
+    #[cfg(test)]
+    pub(crate) fn create_orphan(ttype: Type) -> Self {
+        Self {
+            id: usize::MAX,
+            ttype,
         }
     }
 }
 
-impl core::fmt::Debug for Block {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Block")
-            .field("id", &self.id)
-            .field("arguments", &self.arguments)
-            .field("operations", &self.operations)
-            .finish()
+impl std::fmt::Display for Value {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "%{:?}:{:?}", self.id, self.ttype)
     }
 }
 
 pub trait Operation {
     fn validate(&self) -> Result<(), String>;
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
+    fn operands(&self) -> &[Value];
+    fn result(&self) -> Option<Value>;
+    fn fmt(&self) -> String;
 }
 
-impl core::fmt::Debug for dyn Operation {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.fmt(f)
-    }
-}
-
+#[non_exhaustive]
 pub struct AddOperation {
-    pub lhs: Value,
-    pub rhs: Value,
-    pub result: Value,
+    operands: [Value; 2],
+    result: Value,
 }
 
 impl AddOperation {
-    pub fn new(lhs: Value, rhs: Value, result: Value) -> AddOperation {
-        AddOperation { lhs, rhs, result }
+    pub fn new(operand0: Value, operand1: Value, result: Value) -> Self {
+        Self {
+            operands: [operand0, operand1],
+            result,
+        }
     }
 }
 
 impl Operation for AddOperation {
     fn validate(&self) -> Result<(), String> {
-        if self.lhs.ttype != self.rhs.ttype {
-            return Err("lhs and rhs must have the same type".to_string());
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
         }
-        if self.lhs.ttype != self.result.ttype {
-            return Err("lhs and result must have the same type".to_string());
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
         }
         Ok(())
     }
 
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("AddOperation")
-            .field("lhs", &self.lhs)
-            .field("rhs", &self.rhs)
-            .field("result", &self.result)
-            .finish()
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn fmt(&self) -> String {
+        format!(
+            "AddOperation({}, {}) -> {}",
+            self.operands[0], self.operands[1], self.result
+        )
     }
 }
 
-#[derive(Clone)]
-pub struct Value {
-    pub name: String,
-    pub ttype: String,
+#[non_exhaustive]
+pub struct Block {
+    pub id: usize,
+    pub arguments: Vec<Value>,
+    pub operations: Vec<Box<dyn Operation>>,
 }
 
-impl core::fmt::Debug for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Value")
-            .field("name", &self.name)
-            .field("ttype", &self.ttype)
-            .finish()
+impl Block {
+    pub fn new() -> Self {
+        Self {
+            id: usize::MAX,
+            arguments: Vec::new(),
+            operations: Vec::new(),
+        }
+    }
+
+    pub fn add_operation(&mut self, operation: Box<dyn Operation>) {
+        self.operations.push(operation);
+    }
+
+    pub fn add_argument(&mut self, value: Value) {
+        self.arguments.push(value);
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        for operation in &self.operations {
+            operation.validate()?;
+        }
+        // TODO: Implement
+        Ok(())
+    }
+}
+
+impl Default for Block {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct Function {
+    pub name: String,
+    pub blocks: Vec<Block>,
+    pub values: Vec<Value>,
+}
+
+impl Function {
+    pub fn new(name: String) -> Self {
+        Self {
+            name,
+            blocks: Vec::new(),
+            values: Vec::new(),
+        }
+    }
+
+    pub fn add_block(&mut self, mut block: Block) {
+        block.id = self.blocks.len();
+        self.blocks.push(block);
+    }
+
+    pub fn new_value(&mut self, ttype: Type) -> Value {
+        self.values.push(Value {
+            id: self.values.len(),
+            ttype,
+        });
+        self.values[self.values.len() - 1]
+    }
+
+    pub fn validate(&self) -> Result<(), String> {
+        for block in &self.blocks {
+            block.validate()?;
+        }
+        let fast_values: HashSet<Value> = self.values.iter().cloned().collect();
+
+        // Ensure that all block arguments are owned by the Function.
+        for (block_idx, block) in self.blocks.iter().enumerate() {
+            for arg in &block.arguments {
+                if !fast_values.contains(arg) {
+                    return Err(format!(
+                        "Block {:?} argument {:?} not owned by Function",
+                        block_idx, arg
+                    ));
+                }
+            }
+        }
+
+        // Ensure that all operation arguments and results are owned by the Function.
+        for (block_idx, block) in self.blocks.iter().enumerate() {
+            for (operation_idx, operation) in block.operations.iter().enumerate() {
+                for arg in operation.operands() {
+                    if !fast_values.contains(arg) {
+                        return Err(format!(
+                            "Block {:?} Operation {:?} argument {:?} not owned by Function",
+                            block_idx, operation_idx, arg
+                        ));
+                    }
+                }
+                if let Some(result) = operation.result() {
+                    if !fast_values.contains(&result) {
+                        return Err(format!(
+                            "Block {:?} Operation {:?} result {:?} not owned by Function",
+                            block_idx, operation_idx, result
+                        ));
+                    }
+                }
+            }
+        }
+
+        // TODO: Implement
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ir::{AddOperation, Block, Value};
+    use crate::ir::{Operation, Type, Value};
+
+    use super::{Block, Function};
 
     #[test]
-    fn debug_format_empty_block() {
-        assert_eq!(
-            "Block { id: \"Foo\", arguments: [], operations: [] }",
-            format!("{:?}", Block::new("Foo"))
-        );
+    fn check_api_create_single_function_within_block() {
+        let mut function = Function::new("main".to_string());
+
+        // Add two block arguments
+        let arg0 = function.new_value(Type::I32);
+        let arg1 = function.new_value(Type::I32);
+
+        let mut block = Block::default();
+        block.add_argument(arg0);
+        block.add_argument(arg1);
+
+        let arg2 = function.new_value(Type::I32);
+        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        block.add_operation(add_op);
+
+        function.add_block(block);
+
+        assert!(function.name == "main");
+        assert!(function.values.len() == 3);
+        assert!(function.blocks.len() == 1);
+        assert!(function.blocks[0].arguments.len() == 2);
+        assert!(function.blocks[0].operations.len() == 1);
+        let operation: &dyn Operation = &*function.blocks[0].operations[0];
+        assert!(operation.operands().len() == 2);
+        assert!(operation.result().is_some());
+
+        assert!(function.validate().is_ok());
     }
 
     #[test]
-    fn debug_format_block_with_args() {
-        let mut block = Block::new("Foo");
-        block.arguments.push(Value {
-            name: "bar".to_string(),
-            ttype: "i32".to_string(),
-        });
-        assert_eq!(
-            "Block { id: \"Foo\", arguments: [Value { name: \"bar\", ttype: \"i32\" }], operations: [] }",
-            format!("{:?}", block)
-        );
+    fn function_validation_fails_with_orphan_value_as_block_argument() {
+        let mut function = Function::new("main".to_string());
+
+        // Add two block arguments
+        let arg0 = function.new_value(Type::I32);
+        let arg1 = Value::create_orphan(Type::I32);
+
+        let mut block = Block::default();
+        block.add_argument(arg0);
+        block.add_argument(arg1);
+
+        let arg2 = function.new_value(Type::I32);
+        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        block.add_operation(add_op);
+
+        function.add_block(block);
+
+        assert!(function.validate().is_err());
     }
 
     #[test]
-    fn debug_format_block_with_operation() {
-        let mut block = Block::new("Foo");
-        block.arguments.push(Value {
-            name: "lhs".to_string(),
-            ttype: "i32".to_string(),
-        });
-        block.arguments.push(Value {
-            name: "rhs".to_string(),
-            ttype: "i32".to_string(),
-        });
-        let add = Box::new(AddOperation::new(
-            block.arguments[0].clone(),
-            block.arguments[1].clone(),
-            Value {
-                name: "result".to_string(),
-                ttype: "i32".to_string(),
-            },
+    fn function_validation_fails_with_orphan_value_as_operation_operand() {
+        let mut function = Function::new("main".to_string());
+
+        // Add two block arguments
+        let arg0 = function.new_value(Type::I32);
+        let arg1 = Value::create_orphan(Type::I32);
+
+        let mut block = Block::default();
+        block.add_argument(arg0);
+        block.add_argument(arg1);
+
+        let arg2 = function.new_value(Type::I32);
+        let add_op = Box::new(super::AddOperation::new(
+            arg0,
+            Value::create_orphan(Type::I32),
+            arg2,
         ));
-        block.operations.push(add);
-        assert_eq!(
-            "Block { id: \"Foo\", arguments: [Value { name: \"lhs\", ttype: \"i32\" }, Value { name: \"rhs\", ttype: \"i32\" }], operations: [AddOperation { lhs: Value { name: \"lhs\", ttype: \"i32\" }, rhs: Value { name: \"rhs\", ttype: \"i32\" }, result: Value { name: \"result\", ttype: \"i32\" } }] }",
-            format!("{:?}", block)
-        );
+        block.add_operation(add_op);
+
+        function.add_block(block);
+
+        assert!(function.validate().is_err());
+    }
+
+    #[test]
+    fn function_validation_fails_with_orphan_value_as_operation_return_value() {
+        let mut function = Function::new("main".to_string());
+
+        // Add two block arguments
+        let arg0 = function.new_value(Type::I32);
+        let arg1 = function.new_value(Type::I32);
+
+        let mut block = Block::default();
+        block.add_argument(arg0);
+        block.add_argument(arg1);
+
+        let arg2 = Value::create_orphan(Type::I32);
+        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        block.add_operation(add_op);
+
+        function.add_block(block);
+
+        assert!(function.validate().is_err());
+    }
+
+    #[test]
+    fn function_validation_fails_with_malformed_operation() {
+        let mut function = Function::new("main".to_string());
+
+        // Add two block arguments
+        let arg0 = function.new_value(Type::I32);
+        let arg1 = function.new_value(Type::I32);
+
+        let mut block = Block::default();
+        block.add_argument(arg0);
+        block.add_argument(arg1);
+
+        let arg2 = Value::create_orphan(Type::I32);
+        let add_op = Box::new(super::AddOperation::new(arg0, arg1, arg2));
+        block.add_operation(add_op);
+
+        function.add_block(block);
+
+        assert!(function.validate().is_err());
+    }
+
+    #[test]
+    fn format_add_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let add_op = super::AddOperation::new(arg0, arg1, result);
+        assert!(add_op.fmt() == "AddOperation(%0:I32, %1:I32) -> %2:I32");
     }
 }
