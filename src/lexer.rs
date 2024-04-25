@@ -1,6 +1,5 @@
 use crate::token::Kind;
 use crate::token::Token;
-use std::str;
 
 pub struct Lexer<'a> {
     input: &'a [u8],
@@ -107,7 +106,7 @@ impl<'a> Lexer<'a> {
         while self.peek_char().is_alphanumeric() {
             self.step();
         }
-        match str::from_utf8(self.text_range(start)) {
+        match std::str::from_utf8(self.text_range(start)) {
             Ok(text) => match crate::token::KEYWORDS.get(text) {
                 Some(kind) => Some(self.text_token(start, *kind)),
                 _ => {
