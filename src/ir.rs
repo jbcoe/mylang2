@@ -36,10 +36,23 @@ impl std::fmt::Display for Value {
 }
 
 pub trait Operation {
+    fn name(&self) -> &str;
     fn validate(&self) -> Result<(), String>;
     fn operands(&self) -> &[Value];
     fn result(&self) -> Option<Value>;
-    fn fmt(&self) -> String;
+    fn fmt(&self) -> String {
+        let comma_separated_operands = itertools::join(self.operands(), ", ");
+        if let Some(result) = self.result() {
+            format!(
+                "{}({}) -> {}",
+                self.name(),
+                comma_separated_operands,
+                result
+            )
+        } else {
+            format!("{}({})", self.name(), comma_separated_operands)
+        }
+    }
 }
 
 #[non_exhaustive]
@@ -55,6 +68,10 @@ impl AddOperation {
 }
 
 impl Operation for AddOperation {
+    fn name(&self) -> &str {
+        "AddOperation"
+    }
+
     fn validate(&self) -> Result<(), String> {
         if self.operands[0].ttype != self.operands[1].ttype {
             return Err("Type mismatch".to_string());
@@ -71,13 +88,6 @@ impl Operation for AddOperation {
 
     fn result(&self) -> Option<Value> {
         Some(self.result)
-    }
-
-    fn fmt(&self) -> String {
-        format!(
-            "AddOperation({}, {}) -> {}",
-            self.operands[0], self.operands[1], self.result
-        )
     }
 }
 
@@ -94,6 +104,10 @@ impl MultiplyOperation {
 }
 
 impl Operation for MultiplyOperation {
+    fn name(&self) -> &str {
+        "MultiplyOperation"
+    }
+
     fn validate(&self) -> Result<(), String> {
         if self.operands[0].ttype != self.operands[1].ttype {
             return Err("Type mismatch".to_string());
@@ -110,13 +124,6 @@ impl Operation for MultiplyOperation {
 
     fn result(&self) -> Option<Value> {
         Some(self.result)
-    }
-
-    fn fmt(&self) -> String {
-        format!(
-            "MultiplyOperation({}, {}) -> {}",
-            self.operands[0], self.operands[1], self.result
-        )
     }
 }
 
