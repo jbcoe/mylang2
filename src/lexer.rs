@@ -191,7 +191,7 @@ impl<'a> Lexer<'a> {
             self.step();
         }
 
-        let token = self.text_token(start + 1, Kind::String);
+        let token = self.text_token(start + 1, Kind::StringLiteral);
         self.step(); // consume the closing quote.
         Some(token)
     }
@@ -385,7 +385,7 @@ mod tests {
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             ("=", Kind::EqualSign),
-            ("five", Kind::String),
+            ("five", Kind::StringLiteral),
         ],
     }
 
