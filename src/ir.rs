@@ -53,6 +53,11 @@ pub trait Operation {
             format!("{}({})", self.name(), comma_separated_operands)
         }
     }
+    fn as_any(&self) -> &dyn std::any::Any;
+}
+
+pub fn cast<T: Operation + 'static>(operation: &dyn Operation) -> Option<&T> {
+    operation.as_any().downcast_ref::<T>()
 }
 
 #[non_exhaustive]
@@ -89,6 +94,10 @@ impl Operation for AddOperation {
     fn result(&self) -> Option<Value> {
         Some(self.result)
     }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 #[non_exhaustive]
@@ -124,6 +133,10 @@ impl Operation for MultiplyOperation {
 
     fn result(&self) -> Option<Value> {
         Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 
@@ -242,7 +255,9 @@ impl Function {
 #[cfg(test)]
 mod tests {
 
-    use crate::ir::{AddOperation, Block, Function, MultiplyOperation, Operation, Type, Value};
+    use crate::ir::{
+        cast, AddOperation, Block, Function, MultiplyOperation, Operation, Type, Value,
+    };
 
     #[test]
     fn check_api_create_single_function_within_block() {
@@ -420,5 +435,35 @@ mod tests {
 
         assert!(function.name == "main");
         assert!(function.validate().is_ok());
+    }
+
+    #[test]
+    fn check_cast() {
+        let add_op = AddOperation::new(
+            [
+                Value {
+                    id: 0,
+                    ttype: Type::I32,
+                },
+                Value {
+                    id: 1,
+                    ttype: Type::I32,
+                },
+            ],
+            Value {
+                id: 2,
+                ttype: Type::I32,
+            },
+        );
+
+        let op: &dyn Operation = &add_op;
+
+        if cast::<AddOperation>(op).is_none() {
+            panic!("Failed to cast AddOperation to AddOperation")
+        }
+
+        if cast::<MultiplyOperation>(op).is_some() {
+            panic!("Erroneously cast AddOperation to MultiplyOperation")
+        }
     }
 }
