@@ -94,6 +94,7 @@ impl<'a> Parser<'a> {
                 self.step(); // Consume the integer literal.
                 Ok(Expression::IntegerLiteral(literal))
             }
+            //TODO:DEV ADD StringLiteral
             _ => {
                 self.reset(start);
                 Err(format!(
