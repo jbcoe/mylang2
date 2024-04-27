@@ -27,6 +27,7 @@ pub enum Kind {
     Semicolon,
     Star,
     String,
+    StringLiteral,
     Unknown,
     Whitespace,
 }
