@@ -541,6 +541,30 @@ mod tests {
     }
 
     lexer_test_case! {
+        float_with_exponent,
+        "3.14e2",
+        &[
+            ("3.14e2", Kind::FloatLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        float_with_positive_exponent,
+        "3.14e+2",
+        &[
+            ("3.14e+2", Kind::FloatLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        float_with_negative_exponent,
+        "3.14e-2",
+        &[
+            ("3.14e-2", Kind::FloatLiteral),
+        ],
+    }
+
+    lexer_test_case! {
         comment,
         "let x:float64 = 0 # this is a comment\n",
         &[
