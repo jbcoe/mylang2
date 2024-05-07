@@ -99,6 +99,7 @@ impl<'a> Parser<'a> {
                 self.step(); // Consume the float literal.
                 Ok(Expression::FloatLiteral(literal))
             }
+            //TODO:DEV ADD StringLiteral
             _ => {
                 self.reset(start);
                 Err(format!(
