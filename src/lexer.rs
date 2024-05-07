@@ -172,7 +172,52 @@ impl<'a> Lexer<'a> {
         while self.peek_char().is_ascii_digit() {
             self.step();
         }
+        if self.peek_char() == '.' {
+            self.reset(start);
+            return None; // Not an integer.
+        }
         return Some(self.text_token(start, Kind::IntegerLiteral));
+    }
+
+    // Attempts to read an integer token, potentially advancing the lexer.
+    fn maybe_read_float(&mut self) -> Option<Token<'a>> {
+        if !self.char().is_ascii_digit() {
+            return None;
+        }
+        let start = self.position;
+        while self.peek_char().is_ascii_digit() {
+            self.step();
+        }
+
+        if self.peek_char() != '.' {
+            self.reset(start);
+            return None; // Not a float.
+        }
+        self.step(); // consume the dot.
+                     // Consume numbers after the dot.
+        if !self.peek_char().is_ascii_digit() {
+            self.reset(start);
+            return None;
+        }
+        while self.peek_char().is_ascii_digit() {
+            self.step();
+        }
+
+        // Consume exponent
+        if self.peek_char() == 'e' {
+            self.step(); // consume the e.
+            if self.peek_char() == '-' || self.peek_char() == '+' {
+                self.step(); // consume the sign.
+            }
+            if !self.peek_char().is_ascii_digit() {
+                self.reset(start);
+                return None;
+            }
+            while self.peek_char().is_ascii_digit() {
+                self.step();
+            }
+        }
+        return Some(self.text_token(start, Kind::FloatLiteral));
     }
 
     // Attempts to read a string token, potentially advancing the lexer.
@@ -229,6 +274,8 @@ impl<'a> Lexer<'a> {
         } else if let Some(t) = self.maybe_read_string() {
             return t;
         } else if let Some(t) = self.maybe_read_integer() {
+            return t;
+        } else if let Some(t) = self.maybe_read_float() {
             return t;
         } else if let Some(t) = self.maybe_read_identifier() {
             return t;
@@ -482,14 +529,14 @@ mod tests {
 
     lexer_test_case! {
         float16,
-        "let x:float16 = 0",
+        "let x:float16 = 0.0",
         &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
             (":", Kind::Colon),
             ("float16", Kind::Identifier),
             ("=", Kind::EqualSign),
-            ("0", Kind::IntegerLiteral),
+            ("0.0", Kind::FloatLiteral),
         ],
     }
 

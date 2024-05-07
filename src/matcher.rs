@@ -214,6 +214,38 @@ impl ExpressionMatcher for AnyIntegerLiteralMatcher {
     }
 }
 
+pub struct FloatLiteralMatcher {
+    identifier: String,
+}
+
+impl FloatLiteralMatcher {
+    pub fn new(identifier: String) -> Box<FloatLiteralMatcher> {
+        Box::new(FloatLiteralMatcher { identifier })
+    }
+}
+
+impl ExpressionMatcher for FloatLiteralMatcher {
+    fn matches(&self, expression: &Expression) -> bool {
+        matches!(expression, Expression::FloatLiteral(i) if i.text == self.identifier)
+    }
+}
+
+pub struct AnyFloatLiteralMatcher {
+    _private: (),
+}
+
+impl AnyFloatLiteralMatcher {
+    pub fn new() -> Box<AnyFloatLiteralMatcher> {
+        Box::new(AnyFloatLiteralMatcher { _private: () })
+    }
+}
+
+impl ExpressionMatcher for AnyFloatLiteralMatcher {
+    fn matches(&self, expression: &Expression) -> bool {
+        matches!(expression, Expression::FloatLiteral(_))
+    }
+}
+
 pub struct BinaryExpressionMatcher {
     left: Box<dyn ExpressionMatcher>,
     right: Box<dyn ExpressionMatcher>,
@@ -265,6 +297,16 @@ macro_rules! match_integer_literal {
     };
     () => {
         AnyIntegerLiteralMatcher::new()
+    };
+}
+
+#[macro_export]
+macro_rules! match_float_literal {
+    ($float_literal:literal) => {
+        FloatLiteralMatcher::new($float_literal.to_string())
+    };
+    () => {
+        AnyFloatLiteralMatcher::new()
     };
 }
 
