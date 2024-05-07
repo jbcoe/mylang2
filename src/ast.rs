@@ -20,13 +20,19 @@ pub struct FunctionDeclaration<'a> {
 
 #[derive(Debug)]
 pub enum Expression<'a> {
-    IntegerLiteral(IntegerLiteral<'a>),
-    Identifier(Identifier<'a>),
     BinaryExpression(BinaryExpression<'a>),
+    Identifier(Identifier<'a>),
+    IntegerLiteral(IntegerLiteral<'a>),
+    FloatLiteral(FloatLiteral<'a>),
 }
 
 #[derive(Debug)]
 pub struct IntegerLiteral<'a> {
+    pub text: &'a str,
+}
+
+#[derive(Debug)]
+pub struct FloatLiteral<'a> {
     pub text: &'a str,
 }
 

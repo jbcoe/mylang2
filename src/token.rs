@@ -10,6 +10,7 @@ pub enum Kind {
     Divide,
     EndOfFile,
     EqualSign,
+    FloatLiteral,
     Fn,
     Identifier,
     IntegerLiteral,

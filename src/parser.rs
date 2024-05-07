@@ -94,6 +94,11 @@ impl<'a> Parser<'a> {
                 self.step(); // Consume the integer literal.
                 Ok(Expression::IntegerLiteral(literal))
             }
+            Kind::FloatLiteral => {
+                let literal = ast::FloatLiteral { text: token.text() };
+                self.step(); // Consume the float literal.
+                Ok(Expression::FloatLiteral(literal))
+            }
             //TODO:DEV ADD StringLiteral
             _ => {
                 self.reset(start);
@@ -413,6 +418,15 @@ mod tests {
             "x",
             match_type!(),
             match_integer_literal!("5"))
+    }
+
+    parse_statement_test! {
+        parse_let_statement_with_floating_point_literal,
+        "let x: float32 = 3.14159;",
+        match_let_statement!(
+            "x",
+            match_type!("float32"),
+            match_float_literal!("3.14159"))
     }
 
     parse_statement_test! {
