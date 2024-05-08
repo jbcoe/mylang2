@@ -340,7 +340,14 @@ macro_rules! match_any_expression {
 #[macro_export]
 macro_rules! match_any_type {
     () => {
-        AnyTypeMatcher::new()
+        AnyMatcher::new()
+    };
+}
+
+#[macro_export]
+macro_rules! match_any {
+    () => {
+        AnyMatcher::new()
     };
 }
 
@@ -386,4 +393,227 @@ macro_rules! match_parameter {
     () => {
         AnyMatcher::new()
     };
+}
+
+#[cfg(test)]
+mod tests {
+
+    use crate::{ast::*, matcher::*};
+
+    #[test]
+    fn test_named_type_matcher() {
+        let matcher = NamedTypeMatcher::new("int8".to_string());
+        assert!(matcher.matches(&Type { name: "int8" }));
+        assert!(!matcher.matches(&Type { name: "int32" }));
+    }
+
+    #[test]
+    fn test_named_identifier_matcher() {
+        let matcher = IdentifierMatcher::new("x".to_string());
+        assert!(matcher.matches(&Expression::Identifier(Identifier { name: "x" })));
+        assert!(!matcher.matches(&Expression::Identifier(Identifier { name: "y" })));
+    }
+
+    #[test]
+    fn test_named_parameter_matcher() {
+        let matcher =
+            NamedParameterMatcher::new("x".to_string(), NamedTypeMatcher::new("int8".to_string()));
+        assert!(matcher.matches(&Parameter {
+            identifier: Identifier { name: "x" },
+            ttype: Type { name: "int8" }
+        }));
+        assert!(!matcher.matches(&Parameter {
+            identifier: Identifier { name: "x" },
+            ttype: Type { name: "int16" }
+        }));
+        assert!(!matcher.matches(&Parameter {
+            identifier: Identifier { name: "y" },
+            ttype: Type { name: "int8" }
+        }));
+    }
+
+    #[test]
+    fn test_let_statement_matcher() {
+        let matcher = LetStatementMatcher::new(
+            "x".to_string(),
+            NamedTypeMatcher::new("int8".to_string()),
+            false,
+            AnyMatcher::new(),
+        );
+
+        assert!(matcher.matches(&Statement::Let(LetStatement {
+            identifier: Identifier { name: "x" },
+            ttype: Type { name: "int8" },
+            mutable: false,
+            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+        })));
+
+        assert!(!matcher.matches(&Statement::Let(LetStatement {
+            identifier: Identifier { name: "x" },
+            ttype: Type { name: "int8" },
+            mutable: true,
+            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+        })));
+
+        assert!(!matcher.matches(&Statement::Let(LetStatement {
+            identifier: Identifier { name: "y" },
+            ttype: Type { name: "int8" },
+            mutable: false,
+            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+        })));
+
+        assert!(!matcher.matches(&Statement::Let(LetStatement {
+            identifier: Identifier { name: "x" },
+            ttype: Type { name: "int32" },
+            mutable: false,
+            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+        })));
+
+        assert!(
+            !matcher.matches(&Statement::Expression(Expression::IntegerLiteral(
+                IntegerLiteral { text: "0" }
+            )))
+        );
+    }
+
+    #[test]
+    fn test_function_declaration_matcher() {
+        let matcher = FunctionDeclarationMatcher::new(
+            "f".to_string(),
+            vec![NamedParameterMatcher::new(
+                "x".to_string(),
+                NamedTypeMatcher::new("int8".to_string()),
+            )],
+            NamedTypeMatcher::new("int8".to_string()),
+        );
+
+        assert!(
+            matcher.matches(&Statement::FunctionDeclaration(FunctionDeclaration {
+                identifier: Identifier { name: "f" },
+                parameters: vec![Parameter {
+                    identifier: Identifier { name: "x" },
+                    ttype: Type { name: "int8" }
+                }],
+                return_type: Type { name: "int8" }
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Statement::FunctionDeclaration(FunctionDeclaration {
+                identifier: Identifier { name: "ff" },
+                parameters: vec![Parameter {
+                    identifier: Identifier { name: "x" },
+                    ttype: Type { name: "int8" }
+                }],
+                return_type: Type { name: "int8" }
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Statement::FunctionDeclaration(FunctionDeclaration {
+                identifier: Identifier { name: "f" },
+                parameters: vec![Parameter {
+                    identifier: Identifier { name: "y" },
+                    ttype: Type { name: "int8" }
+                }],
+                return_type: Type { name: "int8" }
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Statement::FunctionDeclaration(FunctionDeclaration {
+                identifier: Identifier { name: "f" },
+                parameters: vec![Parameter {
+                    identifier: Identifier { name: "x" },
+                    ttype: Type { name: "int16" }
+                }],
+                return_type: Type { name: "int8" }
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Statement::FunctionDeclaration(FunctionDeclaration {
+                identifier: Identifier { name: "f" },
+                parameters: vec![Parameter {
+                    identifier: Identifier { name: "x" },
+                    ttype: Type { name: "int8" }
+                }],
+                return_type: Type { name: "int16" }
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Statement::FunctionDeclaration(FunctionDeclaration {
+                identifier: Identifier { name: "g" },
+                parameters: vec![Parameter {
+                    identifier: Identifier { name: "x" },
+                    ttype: Type { name: "int8" }
+                }],
+                return_type: Type { name: "int8" }
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Statement::Expression(Expression::IntegerLiteral(
+                IntegerLiteral { text: "0" }
+            )))
+        );
+    }
+
+    #[test]
+    fn test_integer_literal_matcher() {
+        let matcher = IntegerLiteralMatcher::new("42".to_string());
+        assert!(matcher.matches(&Expression::IntegerLiteral(IntegerLiteral { text: "42" })));
+        assert!(!matcher.matches(&Expression::IntegerLiteral(IntegerLiteral { text: "43" })));
+    }
+
+    #[test]
+    fn test_float_literal_matcher() {
+        let matcher = FloatLiteralMatcher::new("42.0".to_string());
+        assert!(matcher.matches(&Expression::FloatLiteral(FloatLiteral { text: "42.0" })));
+        assert!(!matcher.matches(&Expression::FloatLiteral(FloatLiteral { text: "43.0" })));
+    }
+
+    #[test]
+    fn test_binary_expression_matcher() {
+        let matcher = BinaryExpressionMatcher::new(
+            IntegerLiteralMatcher::new("2".to_string()),
+            BinaryOperator::Plus,
+            IntegerLiteralMatcher::new("2".to_string()),
+        );
+
+        assert!(
+            matcher.matches(&Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::Plus,
+                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" })),
+                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" }))
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::Minus,
+                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" })),
+                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" }))
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::Plus,
+                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "1" })),
+                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" }))
+            }))
+        );
+
+        assert!(
+            !matcher.matches(&Expression::BinaryExpression(BinaryExpression {
+                operator: BinaryOperator::Plus,
+                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" })),
+                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "3" }))
+            }))
+        );
+
+        assert!(!matcher.matches(&Expression::IntegerLiteral(IntegerLiteral { text: "42" })));
+    }
 }
