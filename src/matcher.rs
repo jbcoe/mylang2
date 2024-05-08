@@ -400,6 +400,18 @@ mod tests {
 
     use crate::{ast::*, matcher::*};
 
+    fn integer_literal_expr(text: &str) -> Expression {
+        Expression::IntegerLiteral(IntegerLiteral { text })
+    }
+
+    fn float_literal_expr(text: &str) -> Expression {
+        Expression::FloatLiteral(FloatLiteral { text })
+    }
+
+    fn identifier_expr(name: &str) -> Expression {
+        Expression::Identifier(Identifier { name })
+    }
+
     #[test]
     fn test_named_type_matcher() {
         let matcher = NamedTypeMatcher::new("int8".to_string());
@@ -410,8 +422,8 @@ mod tests {
     #[test]
     fn test_named_identifier_matcher() {
         let matcher = IdentifierMatcher::new("x".to_string());
-        assert!(matcher.matches(&Expression::Identifier(Identifier { name: "x" })));
-        assert!(!matcher.matches(&Expression::Identifier(Identifier { name: "y" })));
+        assert!(matcher.matches(&identifier_expr("x")));
+        assert!(!matcher.matches(&identifier_expr("y")));
     }
 
     #[test]
@@ -445,35 +457,31 @@ mod tests {
             identifier: Identifier { name: "x" },
             ttype: Type { name: "int8" },
             mutable: false,
-            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+            expression: Box::new(integer_literal_expr("0"))
         })));
 
         assert!(!matcher.matches(&Statement::Let(LetStatement {
             identifier: Identifier { name: "x" },
             ttype: Type { name: "int8" },
             mutable: true,
-            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+            expression: Box::new(integer_literal_expr("0"))
         })));
 
         assert!(!matcher.matches(&Statement::Let(LetStatement {
             identifier: Identifier { name: "y" },
             ttype: Type { name: "int8" },
             mutable: false,
-            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+            expression: Box::new(integer_literal_expr("0"))
         })));
 
         assert!(!matcher.matches(&Statement::Let(LetStatement {
             identifier: Identifier { name: "x" },
             ttype: Type { name: "int32" },
             mutable: false,
-            expression: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "0" }))
+            expression: Box::new(integer_literal_expr("0"))
         })));
 
-        assert!(
-            !matcher.matches(&Statement::Expression(Expression::IntegerLiteral(
-                IntegerLiteral { text: "0" }
-            )))
-        );
+        assert!(!matcher.matches(&Statement::Expression(integer_literal_expr("42"))));
     }
 
     #[test]
@@ -553,25 +561,21 @@ mod tests {
             }))
         );
 
-        assert!(
-            !matcher.matches(&Statement::Expression(Expression::IntegerLiteral(
-                IntegerLiteral { text: "0" }
-            )))
-        );
+        assert!(!matcher.matches(&Statement::Expression(integer_literal_expr("42"))));
     }
 
     #[test]
     fn test_integer_literal_matcher() {
         let matcher = IntegerLiteralMatcher::new("42".to_string());
-        assert!(matcher.matches(&Expression::IntegerLiteral(IntegerLiteral { text: "42" })));
-        assert!(!matcher.matches(&Expression::IntegerLiteral(IntegerLiteral { text: "43" })));
+        assert!(matcher.matches(&integer_literal_expr("42")));
+        assert!(!matcher.matches(&integer_literal_expr("43")));
     }
 
     #[test]
     fn test_float_literal_matcher() {
         let matcher = FloatLiteralMatcher::new("42.0".to_string());
-        assert!(matcher.matches(&Expression::FloatLiteral(FloatLiteral { text: "42.0" })));
-        assert!(!matcher.matches(&Expression::FloatLiteral(FloatLiteral { text: "43.0" })));
+        assert!(matcher.matches(&float_literal_expr("42.0")));
+        assert!(!matcher.matches(&float_literal_expr("43.0")));
     }
 
     #[test]
@@ -585,35 +589,35 @@ mod tests {
         assert!(
             matcher.matches(&Expression::BinaryExpression(BinaryExpression {
                 operator: BinaryOperator::Plus,
-                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" })),
-                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" }))
+                left: Box::new(integer_literal_expr("2")),
+                right: Box::new(integer_literal_expr("2"))
             }))
         );
 
         assert!(
             !matcher.matches(&Expression::BinaryExpression(BinaryExpression {
                 operator: BinaryOperator::Minus,
-                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" })),
-                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" }))
+                left: Box::new(integer_literal_expr("2")),
+                right: Box::new(integer_literal_expr("2"))
             }))
         );
 
         assert!(
             !matcher.matches(&Expression::BinaryExpression(BinaryExpression {
                 operator: BinaryOperator::Plus,
-                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "1" })),
-                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" }))
+                left: Box::new(integer_literal_expr("1")),
+                right: Box::new(integer_literal_expr("2"))
             }))
         );
 
         assert!(
             !matcher.matches(&Expression::BinaryExpression(BinaryExpression {
                 operator: BinaryOperator::Plus,
-                left: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "2" })),
-                right: Box::new(Expression::IntegerLiteral(IntegerLiteral { text: "3" }))
+                left: Box::new(integer_literal_expr("2")),
+                right: Box::new(integer_literal_expr("3"))
             }))
         );
 
-        assert!(!matcher.matches(&Expression::IntegerLiteral(IntegerLiteral { text: "42" })));
+        assert!(!matcher.matches(&integer_literal_expr("42")));
     }
 }
