@@ -331,20 +331,6 @@ macro_rules! match_binary_expression {
 }
 
 #[macro_export]
-macro_rules! match_any_expression {
-    () => {
-        AnyMatcher::new()
-    };
-}
-
-#[macro_export]
-macro_rules! match_any_type {
-    () => {
-        AnyMatcher::new()
-    };
-}
-
-#[macro_export]
 macro_rules! match_any {
     () => {
         AnyMatcher::new()

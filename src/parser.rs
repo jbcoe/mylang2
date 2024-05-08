@@ -364,31 +364,19 @@ mod tests {
     parse_expression_test!(
         parse_binary_minus_expression,
         "2 - 4;",
-        match_binary_expression!(
-            match_any_expression!(),
-            ast::BinaryOperator::Minus,
-            match_any_expression!()
-        )
+        match_binary_expression!(match_any!(), ast::BinaryOperator::Minus, match_any!())
     );
 
     parse_expression_test!(
         parse_binary_star_expression,
         "2 * 4;",
-        match_binary_expression!(
-            match_any_expression!(),
-            ast::BinaryOperator::Star,
-            match_any_expression!()
-        )
+        match_binary_expression!(match_any!(), ast::BinaryOperator::Star, match_any!())
     );
 
     parse_expression_test!(
         parse_binary_divide_expression,
         "2 / 4;",
-        match_binary_expression!(
-            match_any_expression!(),
-            ast::BinaryOperator::Divide,
-            match_any_expression!()
-        )
+        match_binary_expression!(match_any!(), ast::BinaryOperator::Divide, match_any!())
     );
 
     macro_rules! parse_statement_test {
@@ -444,7 +432,7 @@ mod tests {
         match_mutable_let_statement!(
             "x",
             match_type!(),
-            match_any_expression!())
+            match_any!())
     }
 
     parse_statement_test! {
