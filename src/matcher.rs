@@ -150,6 +150,22 @@ impl StatementMatcher for FunctionDeclarationMatcher {
     }
 }
 
+pub struct ReturnStatementMatcher {
+    expression: Box<dyn ExpressionMatcher>,
+}
+
+impl ReturnStatementMatcher {
+    pub fn new(expression: Box<dyn ExpressionMatcher>) -> Box<ReturnStatementMatcher> {
+        Box::new(ReturnStatementMatcher { expression })
+    }
+}
+
+impl StatementMatcher for ReturnStatementMatcher {
+    fn matches(&self, statement: &Statement) -> bool {
+        matches!(statement, Statement::Return(return_statement) if self.expression.matches(&return_statement.expression))
+    }
+}
+
 pub struct IdentifierMatcher {
     identifier: String,
 }
@@ -381,6 +397,16 @@ macro_rules! match_parameter {
     };
 }
 
+#[macro_export]
+macro_rules! match_return_statement {
+    ($expression:expr) => {
+        ReturnStatementMatcher::new($expression)
+    };
+    () => {
+        ReturnStatementMatcher::new(AnyMatcher::new())
+    };
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -605,5 +631,17 @@ mod tests {
         );
 
         assert!(!matcher.matches(&integer_literal_expr("42")));
+    }
+
+    #[test]
+    fn test_return_statement_matcher() {
+        let matcher = ReturnStatementMatcher::new(IntegerLiteralMatcher::new("42".to_string()));
+        assert!(matcher.matches(&Statement::Return(ReturnStatement {
+            expression: Box::new(integer_literal_expr("42"))
+        })));
+        assert!(!matcher.matches(&Statement::Return(ReturnStatement {
+            expression: Box::new(integer_literal_expr("43"))
+        })));
+        assert!(!matcher.matches(&Statement::Expression(integer_literal_expr("42"))));
     }
 }

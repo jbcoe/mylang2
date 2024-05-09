@@ -3,6 +3,7 @@ pub enum Statement<'a> {
     Let(LetStatement<'a>),
     FunctionDeclaration(FunctionDeclaration<'a>),
     Expression(Expression<'a>),
+    Return(ReturnStatement<'a>),
 }
 
 #[derive(Debug)]
@@ -66,6 +67,11 @@ pub struct LetStatement<'a> {
     pub identifier: Identifier<'a>,
     pub ttype: Type<'a>,
     pub mutable: bool,
+    pub expression: Box<Expression<'a>>,
+}
+
+#[derive(Debug)]
+pub struct ReturnStatement<'a> {
     pub expression: Box<Expression<'a>>,
 }
 

@@ -142,6 +142,14 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    fn parse_return_statement(&mut self) -> Result<Statement<'a>, String> {
+        let start = self.position;
+        self.consume(Kind::Return, start)?;
+        let expression = Box::new(self.parse_simple_expression(start)?);
+        self.consume(Kind::Semicolon, start)?;
+        Ok(ast::Statement::Return(ast::ReturnStatement { expression }))
+    }
+
     fn parse_binary_expression(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
         let left = Box::new(self.parse_simple_expression(start)?);
@@ -230,6 +238,7 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Statement<'a>, String> {
         let token = self.token();
         match token.kind() {
+            Kind::Return => self.parse_return_statement(),
             Kind::Let => self.parse_let_stmt(),
             Kind::Identifier => self.parse_binary_expression(),
             Kind::IntegerLiteral => self.parse_binary_expression(),
@@ -466,5 +475,12 @@ mod tests {
         match_function_declaration!(
             "mean",
             match_type!("float32"))
+    }
+
+    parse_statement_test! {
+        parse_return_statement,
+        "return 5.0;",
+        match_return_statement!(
+            match_float_literal!("5.0"))
     }
 }
