@@ -150,6 +150,33 @@ impl StatementMatcher for FunctionDeclarationMatcher {
     }
 }
 
+pub struct FunctionCallMatcher {
+    identifier: String,
+    arguments: Vec<Box<dyn ExpressionMatcher>>,
+}
+
+impl FunctionCallMatcher {
+    pub fn new(
+        identifier: String,
+        arguments: Vec<Box<dyn ExpressionMatcher>>,
+    ) -> Box<FunctionCallMatcher> {
+        Box::new(FunctionCallMatcher {
+            identifier,
+            arguments,
+        })
+    }
+}
+
+impl ExpressionMatcher for FunctionCallMatcher {
+    fn matches(&self, expression: &Expression) -> bool {
+        matches!(expression, Expression::FunctionCall(function_call) if {
+            function_call.identifier.name == self.identifier
+                && function_call.arguments.len() == self.arguments.len()
+                && self.arguments.iter().zip(function_call.arguments.iter()).all(|(m, a)| m.matches(a))
+        })
+    }
+}
+
 pub struct ReturnStatementMatcher {
     expression: Box<dyn ExpressionMatcher>,
 }
@@ -407,6 +434,16 @@ macro_rules! match_return_statement {
     };
 }
 
+#[macro_export]
+macro_rules! match_function_call {
+    ($identifier:literal) => {
+        FunctionCallMatcher::new($identifier.to_string(), vec![])
+    };
+    ($identifier:literal, $args:expr) => {
+        FunctionCallMatcher::new($identifier.to_string(), $args)
+    };
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -643,5 +680,30 @@ mod tests {
             expression: Box::new(integer_literal_expr("43"))
         })));
         assert!(!matcher.matches(&Statement::Expression(integer_literal_expr("42"))));
+    }
+
+    #[test]
+    fn test_function_call_matcher() {
+        let matcher = FunctionCallMatcher::new(
+            "f".to_string(),
+            vec![IntegerLiteralMatcher::new("42".to_string())],
+        );
+        assert!(matcher.matches(&Expression::FunctionCall(FunctionCall {
+            identifier: Identifier { name: "f" },
+            arguments: vec![integer_literal_expr("42")]
+        })));
+        assert!(!matcher.matches(&Expression::FunctionCall(FunctionCall {
+            identifier: Identifier { name: "g" },
+            arguments: vec![integer_literal_expr("42")]
+        })));
+        assert!(!matcher.matches(&Expression::FunctionCall(FunctionCall {
+            identifier: Identifier { name: "f" },
+            arguments: vec![integer_literal_expr("43")]
+        })));
+        assert!(!matcher.matches(&Expression::FunctionCall(FunctionCall {
+            identifier: Identifier { name: "f" },
+            arguments: vec![integer_literal_expr("42"), integer_literal_expr("42")]
+        })));
+        assert!(!matcher.matches(&integer_literal_expr("42")));
     }
 }

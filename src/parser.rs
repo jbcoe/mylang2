@@ -1,5 +1,3 @@
-#![allow(irrefutable_let_patterns)]
-
 use crate::{
     ast::Program,
     ast::{
@@ -81,7 +79,46 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_simple_expression(&mut self, start: usize) -> Result<Expression<'a>, String> {
+    fn parse_expression_statement(&mut self) -> Result<Statement<'a>, String> {
+        let start = self.position;
+        if let Ok(expression) = self.parse_function_call(start) {
+            self.consume(Kind::Semicolon, start)?;
+            return Ok(ast::Statement::Expression(expression));
+        }
+        if let Ok(expression) = self.parse_binary_expression(start) {
+            self.consume(Kind::Semicolon, start)?;
+            return Ok(ast::Statement::Expression(expression));
+        }
+        if let Ok(expression) = self.parse_identifier_expression(start) {
+            self.consume(Kind::Semicolon, start)?;
+            return Ok(ast::Statement::Expression(expression));
+        }
+        Err("Failed to parse expression statement".to_string())
+    }
+
+    fn parse_function_call(&mut self, start: usize) -> Result<Expression<'a>, String> {
+        let token = self.token();
+        if token.kind() != Kind::Identifier {
+            self.reset(start);
+            return Err(format!("Expected identifier, got {:?}", token));
+        }
+        let identifier = Identifier { name: token.text() };
+        self.step(); // Consume the identifier.
+        self.consume(Kind::LeftParenthesis, start)?;
+        let mut arguments = vec![];
+        while self.token().kind() != Kind::RightParenthesis {
+            let argument = self.parse_identifier_expression(start)?;
+            arguments.push(argument);
+            self.maybe_consume(Kind::Comma);
+        }
+        self.consume(Kind::RightParenthesis, start)?; // Consume the ')'.
+        Ok(Expression::FunctionCall(ast::FunctionCall {
+            identifier,
+            arguments,
+        }))
+    }
+
+    fn parse_identifier_expression(&mut self, start: usize) -> Result<Expression<'a>, String> {
         let token = self.token();
         match token.kind() {
             Kind::Identifier => {
@@ -131,7 +168,7 @@ impl<'a> Parser<'a> {
             name: self.consume_identifier_name(start)?,
         };
         self.consume(Kind::EqualSign, start)?;
-        let expression = Box::new(self.parse_simple_expression(start)?);
+        let expression = Box::new(self.parse_identifier_expression(start)?);
         self.consume(Kind::Semicolon, start)?;
 
         Ok(ast::Statement::Let(LetStatement {
@@ -145,14 +182,13 @@ impl<'a> Parser<'a> {
     fn parse_return_statement(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
         self.consume(Kind::Return, start)?;
-        let expression = Box::new(self.parse_simple_expression(start)?);
+        let expression = Box::new(self.parse_identifier_expression(start)?);
         self.consume(Kind::Semicolon, start)?;
         Ok(ast::Statement::Return(ast::ReturnStatement { expression }))
     }
 
-    fn parse_binary_expression(&mut self) -> Result<Statement<'a>, String> {
-        let start = self.position;
-        let left = Box::new(self.parse_simple_expression(start)?);
+    fn parse_binary_expression(&mut self, start: usize) -> Result<Expression<'a>, String> {
+        let left = Box::new(self.parse_identifier_expression(start)?);
 
         let op_token = self.token();
         let operator = match op_token.kind() {
@@ -167,19 +203,21 @@ impl<'a> Parser<'a> {
         };
         self.step(); // Consume the op symbol.
 
-        let right = Box::new(self.parse_simple_expression(start)?);
-        self.consume(Kind::Semicolon, start)?;
+        let right = Box::new(self.parse_identifier_expression(start)?);
 
-        Ok(ast::Statement::Expression(Expression::BinaryExpression(
-            BinaryExpression {
-                operator,
-                left,
-                right,
-            },
-        )))
+        if self.token().kind() != Kind::Semicolon {
+            self.reset(start);
+            return Err(format!("Expected a semicolon, got {:?}", self.token()));
+        }
+
+        Ok(Expression::BinaryExpression(BinaryExpression {
+            operator,
+            left,
+            right,
+        }))
     }
 
-    fn parse_function(&mut self) -> Result<Statement<'a>, String> {
+    fn parse_function_definition(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
         self.consume(Kind::Fn, start)?;
 
@@ -240,10 +278,11 @@ impl<'a> Parser<'a> {
         match token.kind() {
             Kind::Return => self.parse_return_statement(),
             Kind::Let => self.parse_let_stmt(),
-            Kind::Identifier => self.parse_binary_expression(),
-            Kind::IntegerLiteral => self.parse_binary_expression(),
-            Kind::Fn => self.parse_function(),
-            _ => Err(format!("Failed to parse token {:?}", token)),
+            Kind::Fn => self.parse_function_definition(),
+            _ => match self.parse_expression_statement() {
+                Ok(stmt) => Ok(stmt),
+                Err(_) => Err(format!("Failed to parse statement {:?}", token)),
+            },
         }
     }
 
@@ -337,7 +376,7 @@ mod tests {
                         for (statement, matcher) in program.statements.iter().zip(matchers.iter())
                         {
                             if let ast::Statement::Expression(expr) = statement {
-                                assert!(matcher.matches(expr),
+                                assert!(ExpressionMatcher::matches(&**matcher, expr),
                                         "Matcher failed to match expression {:?}", expr);
                             } else {
                                 panic!("Expected an expression statement");
@@ -386,6 +425,25 @@ mod tests {
         parse_binary_divide_expression,
         "2 / 4;",
         match_binary_expression!(match_any!(), ast::BinaryOperator::Divide, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_function_call_expression,
+        "foo();",
+        match_function_call!("foo")
+    );
+
+    parse_expression_test!(
+        parse_function_call_expression_with_arguments,
+        "foo(x, y, 5);",
+        match_function_call!(
+            "foo",
+            vec![
+                match_identifier!("x"),
+                match_identifier!("y"),
+                match_integer_literal!("5")
+            ]
+        )
     );
 
     macro_rules! parse_statement_test {
@@ -445,7 +503,7 @@ mod tests {
     }
 
     parse_statement_test! {
-        parse_function,
+        parse_function_definition,
         "fn max(x:int32, y:int32) -> int32;",
         match_function_declaration!(
             "max",
@@ -454,7 +512,7 @@ mod tests {
     }
 
     parse_statement_test! {
-        parse_function_with_no_parameters,
+        parse_function_definition_with_no_parameters,
         "fn max() -> int32;",
         match_function_declaration!(
             "max",
@@ -462,7 +520,7 @@ mod tests {
     }
 
     parse_statement_test! {
-        parse_functions,
+        parse_function_definitions,
         "fn max() -> int32;
         fn min() -> int32;
         fn mean() -> float32;",

@@ -20,11 +20,18 @@ pub struct FunctionDeclaration<'a> {
 }
 
 #[derive(Debug)]
+pub struct FunctionCall<'a> {
+    pub identifier: Identifier<'a>,
+    pub arguments: Vec<Expression<'a>>,
+}
+
+#[derive(Debug)]
 pub enum Expression<'a> {
     BinaryExpression(BinaryExpression<'a>),
     Identifier(Identifier<'a>),
     IntegerLiteral(IntegerLiteral<'a>),
     FloatLiteral(FloatLiteral<'a>),
+    FunctionCall(FunctionCall<'a>),
 }
 
 #[derive(Debug)]
