@@ -124,7 +124,17 @@ impl<'a> Lexer<'a> {
     // Attempts to read a symbol token, potentially advancing the lexer.
     fn maybe_read_symbol(&mut self) -> Option<Token<'a>> {
         return if self.char() == '=' {
-            Some(self.char_token(Kind::EqualSign))
+            if self.peek_char() == '=' {
+                let start = self.position;
+                self.step();
+                Some(self.text_token(start, Kind::Equal))
+            } else {
+                Some(self.char_token(Kind::Assign))
+            }
+        } else if self.char() == '!' && self.peek_char() == '=' {
+            let start = self.position;
+            self.step();
+            Some(self.text_token(start, Kind::NotEqual))
         } else if self.char() == ':' {
             Some(self.char_token(Kind::Colon))
         } else if self.char() == '+' {
@@ -157,6 +167,22 @@ impl<'a> Lexer<'a> {
             Some(self.char_token(Kind::Semicolon))
         } else if self.char() == ',' {
             Some(self.char_token(Kind::Comma))
+        } else if self.char() == '<' {
+            if self.peek_char() == '=' {
+                let start = self.position;
+                self.step();
+                Some(self.text_token(start, Kind::LessOrEqual))
+            } else {
+                Some(self.char_token(Kind::Less))
+            }
+        } else if self.char() == '>' {
+            if self.peek_char() == '=' {
+                let start = self.position;
+                self.step();
+                Some(self.text_token(start, Kind::GreaterOrEqual))
+            } else {
+                Some(self.char_token(Kind::Greater))
+            }
         } else {
             None
         };
@@ -407,7 +433,7 @@ mod tests {
         &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
-            ("=", Kind::EqualSign),
+            ("=", Kind::Assign),
             ("5", Kind::IntegerLiteral),
         ],
     }
@@ -419,7 +445,7 @@ mod tests {
             ("let", Kind::Let),
             ("mut", Kind::Mut),
             ("x", Kind::Identifier),
-            ("=", Kind::EqualSign),
+            ("=", Kind::Assign),
             ("5", Kind::IntegerLiteral),
         ],
     }
@@ -430,7 +456,7 @@ mod tests {
         &[
             ("let", Kind::Let),
             ("x", Kind::Identifier),
-            ("=", Kind::EqualSign),
+            ("=", Kind::Assign),
             ("five", Kind::StringLiteral),
         ],
     }
@@ -534,7 +560,7 @@ mod tests {
             ("x", Kind::Identifier),
             (":", Kind::Colon),
             ("float16", Kind::Identifier),
-            ("=", Kind::EqualSign),
+            ("=", Kind::Assign),
             ("0.0", Kind::FloatLiteral),
         ],
     }
@@ -571,7 +597,7 @@ mod tests {
             ("x", Kind::Identifier),
             (":", Kind::Colon),
             ("float64", Kind::Identifier),
-            ("=", Kind::EqualSign),
+            ("=", Kind::Assign),
             ("0", Kind::IntegerLiteral),
             ("# this is a comment", Kind::Comment),
         ],
@@ -585,9 +611,69 @@ mod tests {
             ("x", Kind::Identifier),
             (":", Kind::Colon),
             ("float64", Kind::Identifier),
-            ("=", Kind::EqualSign),
+            ("=", Kind::Assign),
             ("0", Kind::IntegerLiteral),
             ("# this is not a comment", Kind::Unknown),
+        ],
+    }
+
+    lexer_test_case! {
+        less,
+        "4 < 5",
+        &[
+            ("4", Kind::IntegerLiteral),
+            ("<", Kind::Less),
+            ("5", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        less_or_equal,
+        "4 <= 5",
+        &[
+            ("4", Kind::IntegerLiteral),
+            ("<=", Kind::LessOrEqual),
+            ("5", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        greater,
+        "4 > 5",
+        &[
+            ("4", Kind::IntegerLiteral),
+            (">", Kind::Greater),
+            ("5", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        greater_or_equal,
+        "4 >= 5",
+        &[
+            ("4", Kind::IntegerLiteral),
+            (">=", Kind::GreaterOrEqual),
+            ("5", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        equal,
+        "4 == 5",
+        &[
+            ("4", Kind::IntegerLiteral),
+            ("==", Kind::Equal),
+            ("5", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        not_equal,
+        "4 != 5",
+        &[
+            ("4", Kind::IntegerLiteral),
+            ("!=", Kind::NotEqual),
+            ("5", Kind::IntegerLiteral),
         ],
     }
 
@@ -614,7 +700,7 @@ let z = x + y
             (" ", Kind::Whitespace, 1, 4),
             ("x", Kind::Identifier, 1, 5),
             (" ", Kind::Whitespace, 1, 6),
-            ("=", Kind::EqualSign, 1, 7),
+            ("=", Kind::Assign, 1, 7),
             (" ", Kind::Whitespace, 1, 8),
             ("5", Kind::IntegerLiteral, 1, 9),
             ("\n", Kind::Whitespace, 1, 10),
@@ -623,7 +709,7 @@ let z = x + y
             (" ", Kind::Whitespace, 2, 4),
             ("y", Kind::Identifier, 2, 5),
             (" ", Kind::Whitespace, 2, 6),
-            ("=", Kind::EqualSign, 2, 7),
+            ("=", Kind::Assign, 2, 7),
             (" ", Kind::Whitespace, 2, 8),
             ("7", Kind::IntegerLiteral, 2, 9),
             ("\n\n", Kind::Whitespace, 2, 10),
@@ -633,7 +719,7 @@ let z = x + y
             (" ", Kind::Whitespace, 4, 4),
             ("z", Kind::Identifier, 4, 5),
             (" ", Kind::Whitespace, 4, 6),
-            ("=", Kind::EqualSign, 4, 7),
+            ("=", Kind::Assign, 4, 7),
             (" ", Kind::Whitespace, 4, 8),
             ("x", Kind::Identifier, 4, 9),
             (" ", Kind::Whitespace, 4, 10),
