@@ -167,7 +167,7 @@ impl<'a> Parser<'a> {
         let ttype = ast::Type {
             name: self.consume_identifier_name(start)?,
         };
-        self.consume(Kind::EqualSign, start)?;
+        self.consume(Kind::Assign, start)?;
         let expression = Box::new(self.parse_identifier_expression(start)?);
         self.consume(Kind::Semicolon, start)?;
 
