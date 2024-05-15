@@ -55,6 +55,12 @@ pub enum BinaryOperator {
     Plus,
     Minus,
     Star,
+    Less,
+    LessOrEqual,
+    Greater,
+    GreaterOrEqual,
+    Equal,
+    NotEqual,
 }
 
 #[derive(Debug)]

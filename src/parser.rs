@@ -196,6 +196,12 @@ impl<'a> Parser<'a> {
             Kind::Minus => ast::BinaryOperator::Minus,
             Kind::Star => ast::BinaryOperator::Star,
             Kind::Divide => ast::BinaryOperator::Divide,
+            Kind::Less => ast::BinaryOperator::Less,
+            Kind::LessOrEqual => ast::BinaryOperator::LessOrEqual,
+            Kind::Greater => ast::BinaryOperator::Greater,
+            Kind::GreaterOrEqual => ast::BinaryOperator::GreaterOrEqual,
+            Kind::Equal => ast::BinaryOperator::Equal,
+            Kind::NotEqual => ast::BinaryOperator::NotEqual,
             _ => {
                 self.reset(start);
                 return Err(format!("Expected a binary op, got {:?}", op_token));
@@ -425,6 +431,46 @@ mod tests {
         parse_binary_divide_expression,
         "2 / 4;",
         match_binary_expression!(match_any!(), ast::BinaryOperator::Divide, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_less_than_expression,
+        "2 < 4;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::Less, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_less_than_or_equal_expression,
+        "2 <= 4;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::LessOrEqual, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_greater_than_expression,
+        "2 > 4;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::Greater, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_greater_than_or_equal_expression,
+        "2 >= 4;",
+        match_binary_expression!(
+            match_any!(),
+            ast::BinaryOperator::GreaterOrEqual,
+            match_any!()
+        )
+    );
+
+    parse_expression_test!(
+        parse_equal_expression,
+        "2 == 4;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::Equal, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_not_equal_expression,
+        "2 != 4;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::NotEqual, match_any!())
     );
 
     parse_expression_test!(
