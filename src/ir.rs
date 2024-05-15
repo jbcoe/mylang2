@@ -161,6 +161,76 @@ boolean_binary_operation!(GreaterOrEqualOperation);
 boolean_binary_operation!(EqualOperation);
 boolean_binary_operation!(NotEqualOperation);
 
+pub struct ReturnOperation {
+    operands: [Value; 1],
+}
+
+impl ReturnOperation {
+    pub fn new(operand: Value) -> Self {
+        Self {
+            operands: [operand],
+        }
+    }
+}
+
+impl Operation for ReturnOperation {
+    fn name(&self) -> &str {
+        "ReturnOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        None
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct ConstantOperation {
+    _data: Vec<u8>,
+    result: Value,
+}
+
+impl ConstantOperation {
+    pub fn new(result: Value) -> Self {
+        Self {
+            _data: vec![],
+            result,
+        }
+    }
+}
+
+impl Operation for ConstantOperation {
+    fn name(&self) -> &str {
+        "ConstantOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &[]
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
 #[non_exhaustive]
 pub struct Block {
     pub id: usize,
@@ -573,6 +643,26 @@ mod tests {
         };
         let op = NotEqualOperation::new([arg0, arg1], result);
         assert!(op.fmt() == "NotEqualOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_return_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let op = ReturnOperation::new(arg0);
+        assert!(op.fmt() == "ReturnOperation(%0:I32)");
+    }
+
+    #[test]
+    fn format_constant_operation() {
+        let result = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let op = ConstantOperation::new(result);
+        assert!(op.fmt() == "ConstantOperation() -> %0:I32");
     }
 
     #[test]
