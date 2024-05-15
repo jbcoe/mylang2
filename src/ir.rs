@@ -1,6 +1,7 @@
 // An SSA-based Intermediate Representation inspired by
 // https://mlir.llvm.org/docs/LangRef
 
+use core::str;
 use std::collections::HashSet;
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 #[non_exhaustive]
@@ -115,6 +116,318 @@ impl MultiplyOperation {
 impl Operation for MultiplyOperation {
     fn name(&self) -> &str {
         "MultiplyOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct SubtractionOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl SubtractionOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for SubtractionOperation {
+    fn name(&self) -> &str {
+        "SubtractionOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct DivisionOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl DivisionOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for DivisionOperation {
+    fn name(&self) -> &str {
+        "DivisionOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct LessOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl LessOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for LessOperation {
+    fn name(&self) -> &str {
+        "LessOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct LessOrEqualOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl LessOrEqualOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for LessOrEqualOperation {
+    fn name(&self) -> &str {
+        "LessOrEqualOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct GreaterOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl GreaterOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for GreaterOperation {
+    fn name(&self) -> &str {
+        "GreaterOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct GreaterOrEqualOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl GreaterOrEqualOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for GreaterOrEqualOperation {
+    fn name(&self) -> &str {
+        "GreaterOrEqualOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct EqualOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl EqualOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for EqualOperation {
+    fn name(&self) -> &str {
+        "EqualOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        if self.operands[0].ttype != self.operands[1].ttype {
+            return Err("Type mismatch".to_string());
+        }
+        if self.operands[0].ttype != self.result.ttype {
+            return Err("Type mismatch".to_string());
+        }
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.operands
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+pub struct NotEqualOperation {
+    operands: [Value; 2],
+    result: Value,
+}
+
+impl NotEqualOperation {
+    pub fn new(operands: [Value; 2], result: Value) -> Self {
+        Self { operands, result }
+    }
+}
+
+impl Operation for NotEqualOperation {
+    fn name(&self) -> &str {
+        "NotEqualOperation"
     }
 
     fn validate(&self) -> Result<(), String> {
@@ -255,9 +568,7 @@ impl Function {
 #[cfg(test)]
 mod tests {
 
-    use crate::ir::{
-        cast, AddOperation, Block, Function, MultiplyOperation, Operation, Type, Value,
-    };
+    use crate::ir::*;
 
     #[test]
     fn check_api_create_single_function_within_block() {
@@ -390,8 +701,8 @@ mod tests {
             id: 2,
             ttype: Type::I32,
         };
-        let add_op = AddOperation::new([arg0, arg1], result);
-        assert!(add_op.fmt() == "AddOperation(%0:I32, %1:I32) -> %2:I32");
+        let op = AddOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "AddOperation(%0:I32, %1:I32) -> %2:I32");
     }
 
     #[test]
@@ -408,8 +719,152 @@ mod tests {
             id: 2,
             ttype: Type::I32,
         };
-        let add_op = MultiplyOperation::new([arg0, arg1], result);
-        assert!(add_op.fmt() == "MultiplyOperation(%0:I32, %1:I32) -> %2:I32");
+        let op = MultiplyOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "MultiplyOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_subtraction_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = SubtractionOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "SubtractionOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_division_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = DivisionOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "DivisionOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_less_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = LessOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "LessOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_less_or_equal_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = LessOrEqualOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "LessOrEqualOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_greater_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = GreaterOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "GreaterOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_greater_or_equal_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = GreaterOrEqualOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "GreaterOrEqualOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_equal_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = EqualOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "EqualOperation(%0:I32, %1:I32) -> %2:I32");
+    }
+
+    #[test]
+    fn format_not_equal_operation() {
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = NotEqualOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "NotEqualOperation(%0:I32, %1:I32) -> %2:I32");
     }
 
     #[test]
