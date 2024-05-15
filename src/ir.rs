@@ -61,397 +61,105 @@ pub fn cast<T: Operation + 'static>(operation: &dyn Operation) -> Option<&T> {
     operation.as_any().downcast_ref::<T>()
 }
 
-#[non_exhaustive]
-pub struct AddOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl AddOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for AddOperation {
-    fn name(&self) -> &str {
-        "AddOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
+macro_rules! arithmetic_binary_operation {
+    ($ArithmeticBinaryOp:ident) => {
+        #[non_exhaustive]
+        pub struct $ArithmeticBinaryOp {
+            operands: [Value; 2],
+            result: Value,
         }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
+
+        impl $ArithmeticBinaryOp {
+            pub fn new(operands: [Value; 2], result: Value) -> Self {
+                Self { operands, result }
+            }
         }
-        Ok(())
-    }
 
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
+        impl Operation for $ArithmeticBinaryOp {
+            fn name(&self) -> &str {
+                stringify!($ArithmeticBinaryOp)
+            }
 
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
+            fn validate(&self) -> Result<(), String> {
+                if self.operands[0].ttype != self.operands[1].ttype {
+                    return Err("Type mismatch".to_string());
+                }
+                if self.operands[0].ttype != self.result.ttype {
+                    return Err("Type mismatch".to_string());
+                }
+                Ok(())
+            }
 
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+            fn operands(&self) -> &[Value] {
+                &self.operands
+            }
 
-#[non_exhaustive]
-pub struct MultiplyOperation {
-    operands: [Value; 2],
-    result: Value,
-}
+            fn result(&self) -> Option<Value> {
+                Some(self.result)
+            }
 
-impl MultiplyOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for MultiplyOperation {
-    fn name(&self) -> &str {
-        "MultiplyOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
         }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
+    };
+}
+
+arithmetic_binary_operation!(AddOperation);
+arithmetic_binary_operation!(SubtractOperation);
+arithmetic_binary_operation!(MultiplyOperation);
+arithmetic_binary_operation!(DivideOperation);
+
+macro_rules! boolean_binary_operation {
+    ($BooleanBinaryOp:ident) => {
+        #[non_exhaustive]
+        pub struct $BooleanBinaryOp {
+            operands: [Value; 2],
+            result: Value,
         }
-        Ok(())
-    }
 
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct SubtractionOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl SubtractionOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for SubtractionOperation {
-    fn name(&self) -> &str {
-        "SubtractionOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
+        impl $BooleanBinaryOp {
+            pub fn new(operands: [Value; 2], result: Value) -> Self {
+                Self { operands, result }
+            }
         }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
+
+        impl Operation for $BooleanBinaryOp {
+            fn name(&self) -> &str {
+                stringify!($BooleanBinaryOp)
+            }
+
+            fn validate(&self) -> Result<(), String> {
+                if self.operands[0].ttype != self.operands[1].ttype {
+                    return Err("Type mismatch".to_string());
+                }
+                if self.result.ttype != Type::Bool {
+                    return Err("Type mismatch".to_string());
+                }
+                Ok(())
+            }
+
+            fn operands(&self) -> &[Value] {
+                &self.operands
+            }
+
+            fn result(&self) -> Option<Value> {
+                Some(self.result)
+            }
+
+            fn as_any(&self) -> &dyn std::any::Any {
+                self
+            }
         }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+    };
 }
 
-pub struct DivisionOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl DivisionOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for DivisionOperation {
-    fn name(&self) -> &str {
-        "DivisionOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
-        }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
-        }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct LessOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl LessOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for LessOperation {
-    fn name(&self) -> &str {
-        "LessOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
-        }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
-        }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct LessOrEqualOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl LessOrEqualOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for LessOrEqualOperation {
-    fn name(&self) -> &str {
-        "LessOrEqualOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
-        }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
-        }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct GreaterOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl GreaterOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for GreaterOperation {
-    fn name(&self) -> &str {
-        "GreaterOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
-        }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
-        }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct GreaterOrEqualOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl GreaterOrEqualOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for GreaterOrEqualOperation {
-    fn name(&self) -> &str {
-        "GreaterOrEqualOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
-        }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
-        }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct EqualOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl EqualOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for EqualOperation {
-    fn name(&self) -> &str {
-        "EqualOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
-        }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
-        }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
-
-pub struct NotEqualOperation {
-    operands: [Value; 2],
-    result: Value,
-}
-
-impl NotEqualOperation {
-    pub fn new(operands: [Value; 2], result: Value) -> Self {
-        Self { operands, result }
-    }
-}
-
-impl Operation for NotEqualOperation {
-    fn name(&self) -> &str {
-        "NotEqualOperation"
-    }
-
-    fn validate(&self) -> Result<(), String> {
-        if self.operands[0].ttype != self.operands[1].ttype {
-            return Err("Type mismatch".to_string());
-        }
-        if self.operands[0].ttype != self.result.ttype {
-            return Err("Type mismatch".to_string());
-        }
-        Ok(())
-    }
-
-    fn operands(&self) -> &[Value] {
-        &self.operands
-    }
-
-    fn result(&self) -> Option<Value> {
-        Some(self.result)
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-}
+boolean_binary_operation!(LessOperation);
+boolean_binary_operation!(LessOrEqualOperation);
+boolean_binary_operation!(GreaterOperation);
+boolean_binary_operation!(GreaterOrEqualOperation);
+boolean_binary_operation!(EqualOperation);
+boolean_binary_operation!(NotEqualOperation);
 
 #[non_exhaustive]
 pub struct Block {
@@ -737,8 +445,8 @@ mod tests {
             id: 2,
             ttype: Type::I32,
         };
-        let op = SubtractionOperation::new([arg0, arg1], result);
-        assert!(op.fmt() == "SubtractionOperation(%0:I32, %1:I32) -> %2:I32");
+        let op = SubtractOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "SubtractOperation(%0:I32, %1:I32) -> %2:I32");
     }
 
     #[test]
@@ -755,8 +463,8 @@ mod tests {
             id: 2,
             ttype: Type::I32,
         };
-        let op = DivisionOperation::new([arg0, arg1], result);
-        assert!(op.fmt() == "DivisionOperation(%0:I32, %1:I32) -> %2:I32");
+        let op: DivideOperation = DivideOperation::new([arg0, arg1], result);
+        assert!(op.fmt() == "DivideOperation(%0:I32, %1:I32) -> %2:I32");
     }
 
     #[test]
