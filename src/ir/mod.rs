@@ -3,7 +3,7 @@
 
 pub mod ops;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
 #[non_exhaustive]
 pub enum Type {
@@ -42,17 +42,25 @@ pub trait Operation {
     fn validate(&self) -> Result<(), String>;
     fn operands(&self) -> &[Value];
     fn result(&self) -> Option<Value>;
+    fn metadata(&self) -> Option<&HashMap<String, String>> {
+        None
+    }
     fn fmt(&self) -> String {
-        let comma_separated_operands = itertools::join(self.operands(), ", ");
+        let metadata_key_values = match self.metadata() {
+            Some(metadata) => metadata.iter().collect::<Vec<_>>(),
+            None => Vec::new(),
+        };
+        let metadata_and_operands = itertools::join(
+            metadata_key_values
+                .into_iter()
+                .map(|(k, v)| format!("{}:{}", k, v))
+                .chain(self.operands().iter().map(|v| format!("{}", v))),
+            ", ",
+        );
         if let Some(result) = self.result() {
-            format!(
-                "{}({}) -> {}",
-                self.name(),
-                comma_separated_operands,
-                result
-            )
+            format!("{}({}) -> {}", self.name(), metadata_and_operands, result)
         } else {
-            format!("{}({})", self.name(), comma_separated_operands)
+            format!("{}({})", self.name(), metadata_and_operands)
         }
     }
     fn as_any(&self) -> &dyn std::any::Any;

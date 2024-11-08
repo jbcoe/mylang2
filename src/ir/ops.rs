@@ -1,6 +1,7 @@
 // Implementations of operations.
 
 use core::str;
+use std::collections::HashMap;
 
 use super::Operation;
 use super::Type;
@@ -173,6 +174,54 @@ impl Operation for ConstantOperation {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+}
+
+pub struct FunctionCallOperation {
+    function: String,
+    arguments: Vec<Value>,
+    result: Value,
+    metadata: HashMap<String, String>,
+}
+
+impl FunctionCallOperation {
+    pub fn new(function: &str, arguments: Vec<Value>, result: Value) -> Self {
+        Self {
+            function: function.to_string(),
+            arguments,
+            result,
+            metadata: HashMap::from([("fn".to_string(), function.to_string())]),
+        }
+    }
+
+    pub fn function(&self) -> &str {
+        &self.function
+    }
+}
+
+impl Operation for FunctionCallOperation {
+    fn name(&self) -> &str {
+        "FunctionCallOperation"
+    }
+
+    fn validate(&self) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn operands(&self) -> &[Value] {
+        &self.arguments
+    }
+
+    fn result(&self) -> Option<Value> {
+        Some(self.result)
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn metadata(&self) -> Option<&HashMap<String, String>> {
+        Some(&self.metadata)
     }
 }
 
@@ -380,5 +429,24 @@ mod tests {
         };
         let op = ConstantOperation::new(result);
         assert!(op.fmt() == "ConstantOperation() -> %0:I32");
+    }
+
+    #[test]
+    fn format_function_call_operation() {
+        let function = "foo";
+        let arg0 = Value {
+            id: 0,
+            ttype: Type::I32,
+        };
+        let arg1 = Value {
+            id: 1,
+            ttype: Type::I32,
+        };
+        let result = Value {
+            id: 2,
+            ttype: Type::I32,
+        };
+        let op = FunctionCallOperation::new(function, vec![arg0, arg1], result);
+        assert!(op.fmt() == "FunctionCallOperation(fn:foo, %0:I32, %1:I32) -> %2:I32");
     }
 }
