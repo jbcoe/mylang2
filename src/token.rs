@@ -2,7 +2,9 @@ use std::str;
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Kind {
+    And,
     Arrow,
+    Assign,
     Colon,
     Comma,
     Comment,
@@ -10,12 +12,13 @@ pub enum Kind {
     Divide,
     EndOfFile,
     Equal,
-    Assign,
+    False,
     FloatLiteral,
     Fn,
     Greater,
     GreaterOrEqual,
     Identifier,
+    If,
     IntegerLiteral,
     LeftBrace,
     LeftParenthesis,
@@ -26,6 +29,7 @@ pub enum Kind {
     Minus,
     Mut,
     NotEqual,
+    Or,
     Plus,
     Return,
     RightBrace,
@@ -35,8 +39,10 @@ pub enum Kind {
     Star,
     String,
     StringLiteral,
+    True,
     Unknown,
     Whitespace,
+    XOr,
 }
 
 pub struct Token<'a> {
@@ -104,8 +110,14 @@ impl<'a> Token<'a> {
 }
 
 pub(crate) static KEYWORDS: phf::Map<&'static str, Kind> = phf::phf_map! {
-    "let"=> Kind::Let,
+    "and" => Kind::And,
+    "false" => Kind::False,
     "fn"=> Kind::Fn,
+    "if" => Kind::If,
+    "let"=> Kind::Let,
     "mut"=> Kind::Mut,
+    "or" => Kind::Or,
     "return"=> Kind::Return,
+    "true" => Kind::True,
+    "xor" => Kind::XOr,
 };

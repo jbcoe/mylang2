@@ -27,6 +27,7 @@ pub struct FunctionCall<'a> {
 
 #[derive(Debug)]
 pub enum Expression<'a> {
+    BooleanLiteral(BooleanLiteral),
     BinaryExpression(BinaryExpression<'a>),
     Identifier(Identifier<'a>),
     IntegerLiteral(IntegerLiteral<'a>),
@@ -42,6 +43,11 @@ pub struct IntegerLiteral<'a> {
 #[derive(Debug)]
 pub struct FloatLiteral<'a> {
     pub text: &'a str,
+}
+
+#[derive(Debug)]
+pub struct BooleanLiteral {
+    pub value: bool,
 }
 
 #[derive(Debug)]
@@ -61,6 +67,9 @@ pub enum BinaryOperator {
     GreaterOrEqual,
     Equal,
     NotEqual,
+    And,
+    Or,
+    XOr,
 }
 
 #[derive(Debug)]

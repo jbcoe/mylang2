@@ -289,6 +289,38 @@ impl ExpressionMatcher for AnyFloatLiteralMatcher {
     }
 }
 
+pub struct BooleanLiteralMatcher {
+    value: bool,
+}
+
+impl BooleanLiteralMatcher {
+    pub fn new(value: bool) -> Box<BooleanLiteralMatcher> {
+        Box::new(BooleanLiteralMatcher { value })
+    }
+}
+
+impl ExpressionMatcher for BooleanLiteralMatcher {
+    fn matches(&self, expression: &Expression) -> bool {
+        matches!(expression, Expression::BooleanLiteral(b) if b.value == self.value)
+    }
+}
+
+pub struct AnyBooleanLiteralMatcher {
+    _private: (),
+}
+
+impl AnyBooleanLiteralMatcher {
+    pub fn new() -> Box<AnyBooleanLiteralMatcher> {
+        Box::new(AnyBooleanLiteralMatcher { _private: () })
+    }
+}
+
+impl ExpressionMatcher for AnyBooleanLiteralMatcher {
+    fn matches(&self, expression: &Expression) -> bool {
+        matches!(expression, Expression::BooleanLiteral(_))
+    }
+}
+
 pub struct BinaryExpressionMatcher {
     left: Box<dyn ExpressionMatcher>,
     right: Box<dyn ExpressionMatcher>,
@@ -340,6 +372,16 @@ macro_rules! match_integer_literal {
     };
     () => {
         AnyIntegerLiteralMatcher::new()
+    };
+}
+
+#[macro_export]
+macro_rules! match_boolean_literal {
+    ($boolean_literal:literal) => {
+        BooleanLiteralMatcher::new($boolean_literal)
+    };
+    () => {
+        AnyBooleanLiteralMatcher::new()
     };
 }
 

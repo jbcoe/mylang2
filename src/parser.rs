@@ -136,6 +136,16 @@ impl<'a> Parser<'a> {
                 self.step(); // Consume the float literal.
                 Ok(Expression::FloatLiteral(literal))
             }
+            Kind::True => {
+                let literal = ast::BooleanLiteral { value: true };
+                self.step(); // Consume the boolean literal.
+                Ok(Expression::BooleanLiteral(literal))
+            }
+            Kind::False => {
+                let literal = ast::BooleanLiteral { value: false };
+                self.step(); // Consume the boolean literal.
+                Ok(Expression::BooleanLiteral(literal))
+            }
             //TODO:DEV ADD StringLiteral
             _ => {
                 self.reset(start);
@@ -192,6 +202,9 @@ impl<'a> Parser<'a> {
 
         let op_token = self.token();
         let operator = match op_token.kind() {
+            Kind::Or => ast::BinaryOperator::Or,
+            Kind::And => ast::BinaryOperator::And,
+            Kind::XOr => ast::BinaryOperator::XOr,
             Kind::Plus => ast::BinaryOperator::Plus,
             Kind::Minus => ast::BinaryOperator::Minus,
             Kind::Star => ast::BinaryOperator::Star,
@@ -474,6 +487,24 @@ mod tests {
     );
 
     parse_expression_test!(
+        parse_or_expression,
+        "x or y;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::Or, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_and_expression,
+        "x and false;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::And, match_any!())
+    );
+
+    parse_expression_test!(
+        parse_xor_expression,
+        "true xor y;",
+        match_binary_expression!(match_any!(), ast::BinaryOperator::XOr, match_any!())
+    );
+
+    parse_expression_test!(
         parse_function_call_expression,
         "foo();",
         match_function_call!("foo")
@@ -531,8 +562,26 @@ mod tests {
     }
 
     parse_statement_test! {
+        parse_let_statement_with_boolean_literal_true,
+        "let x: bool = true;",
+        match_let_statement!(
+            "x",
+            match_type!(),
+            match_boolean_literal!(true))
+    }
+
+    parse_statement_test! {
+        parse_let_statement_with_boolean_literal_false,
+        "let x: bool = false;",
+        match_let_statement!(
+            "x",
+            match_type!("bool"),
+            match_boolean_literal!())
+    }
+
+    parse_statement_test! {
         parse_let_statement_with_identifier,
-        "let x: int32 = y; let x: int32 = y; let x: int32 = y;",
+        "let x: int32 = y;",
         match_let_statement!(
             "x",
             match_type!(),

@@ -101,7 +101,6 @@ impl<'a> Lexer<'a> {
         if !self.char().is_ascii_alphabetic() {
             return None;
         }
-
         let start = self.position;
         while self.peek_char().is_alphanumeric() {
             self.step();
@@ -674,6 +673,64 @@ mod tests {
             ("4", Kind::IntegerLiteral),
             ("!=", Kind::NotEqual),
             ("5", Kind::IntegerLiteral),
+        ],
+    }
+
+    lexer_test_case! {
+        if_condition,
+        "if 4 != 5",
+        &[
+            ("if", Kind::If),
+            ("4", Kind::IntegerLiteral),
+            ("!=", Kind::NotEqual),
+            ("5", Kind::IntegerLiteral),
+        ],
+    }
+    lexer_test_case! {
+        if_true,
+        "if true",
+        &[
+            ("if", Kind::If),
+            ("true", Kind::True),
+        ],
+    }
+
+    lexer_test_case! {
+        if_false,
+        "if false",
+        &[
+            ("if", Kind::If),
+            ("false", Kind::False),
+        ],
+    }
+
+    lexer_test_case! {
+        x_and_y,
+        "x and y",
+        &[
+            ("x", Kind::Identifier),
+            ("and", Kind::And),
+            ("y", Kind::Identifier),
+        ],
+    }
+
+    lexer_test_case! {
+        x_or_y,
+        "x or y",
+        &[
+            ("x", Kind::Identifier),
+            ("or", Kind::Or),
+            ("y", Kind::Identifier),
+        ],
+    }
+
+    lexer_test_case! {
+        x_xor_y,
+        "x xor y",
+        &[
+            ("x", Kind::Identifier),
+            ("xor", Kind::XOr),
+            ("y", Kind::Identifier),
         ],
     }
 
