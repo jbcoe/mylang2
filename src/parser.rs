@@ -415,7 +415,7 @@ mod tests {
                         for (statement, matcher) in program.statements.iter().zip(matchers.iter())
                         {
                             if let ast::Statement::Expression(expr) = statement {
-                                assert!(ExpressionMatcher::matches(&**matcher, expr),
+                                assert!(matcher.matches(expr),
                                         "Matcher failed to match expression {:?}", expr);
                             } else {
                                 panic!("Expected an expression statement");
