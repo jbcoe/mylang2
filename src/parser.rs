@@ -186,7 +186,7 @@ impl<'a> Parser<'a> {
             name: self.consume_identifier_name(start)?,
         };
         self.consume(Kind::Assign, start)?;
-        let expression = Box::new(self.parse_identifier_expression(start)?);
+        let expression = Box::new(self.parse_expression()?);
         self.consume(Kind::Semicolon, start)?;
 
         Ok(ast::Statement::Let(LetStatement {
@@ -603,6 +603,15 @@ mod tests {
             "x",
             match_type!(),
             match_any!())
+    }
+
+    parse_statement_test! {
+        parse_let_statement_with_expression,
+        "let x: int32 = 2 + 7;",
+        match_let_statement!(
+            "x",
+            match_type!(),
+            match_binary_expression!())
     }
 
     parse_statement_test! {
