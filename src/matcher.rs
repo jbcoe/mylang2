@@ -2,12 +2,12 @@
 
 use crate::ast::{BinaryOperator, Expression, Parameter, Statement, Type};
 
-pub trait ExpressionMatcher {
-    fn matches(&self, expression: &Expression) -> bool;
-}
-
 pub trait StatementMatcher {
     fn matches(&self, statement: &Statement) -> bool;
+}
+
+pub trait ExpressionMatcher {
+    fn matches(&self, expression: &Expression) -> bool;
 }
 
 pub trait ParameterMatcher {
@@ -150,6 +150,22 @@ impl StatementMatcher for FunctionDeclarationMatcher {
     }
 }
 
+pub struct ExpressionStatementMatcher {
+    expression: Box<dyn ExpressionMatcher>,
+}
+
+impl ExpressionStatementMatcher {
+    pub fn new(expression: Box<dyn ExpressionMatcher>) -> Box<ExpressionStatementMatcher> {
+        Box::new(ExpressionStatementMatcher { expression })
+    }
+}
+
+impl StatementMatcher for ExpressionStatementMatcher {
+    fn matches(&self, statement: &Statement) -> bool {
+        matches!(statement, Statement::Expression(expression) if self.expression.matches(expression))
+    }
+}
+
 pub struct FunctionCallMatcher {
     identifier: String,
     arguments: Vec<Box<dyn ExpressionMatcher>>,
@@ -173,6 +189,30 @@ impl ExpressionMatcher for FunctionCallMatcher {
             function_call.identifier.name == self.identifier
                 && function_call.arguments.len() == self.arguments.len()
                 && self.arguments.iter().zip(function_call.arguments.iter()).all(|(m, a)| m.matches(a))
+        })
+    }
+}
+
+pub struct IfStatementMatcher {
+    condition: Box<dyn ExpressionMatcher>,
+    body: Vec<Box<dyn StatementMatcher>>,
+}
+
+impl IfStatementMatcher {
+    pub fn new(
+        condition: Box<dyn ExpressionMatcher>,
+        body: Vec<Box<dyn StatementMatcher>>,
+    ) -> Box<IfStatementMatcher> {
+        Box::new(IfStatementMatcher { condition, body })
+    }
+}
+
+impl StatementMatcher for IfStatementMatcher {
+    fn matches(&self, statement: &Statement) -> bool {
+        matches!(statement, Statement::If(if_statement) if {
+            self.condition.matches(&if_statement.condition)
+                && self.body.len() == if_statement.body.len()
+                && self.body.iter().zip(if_statement.body.iter()).all(|(m, s)| m.matches(s))
         })
     }
 }
@@ -483,6 +523,26 @@ macro_rules! match_function_call {
     };
     ($identifier:literal, $args:expr) => {
         FunctionCallMatcher::new($identifier.to_string(), $args)
+    };
+}
+
+#[macro_export]
+macro_rules! match_if_statement {
+    ($condition:expr) => {
+        IfStatementMatcher::new($condition, vec![])
+    };
+    ($condition:expr, $body:expr) => {
+        IfStatementMatcher::new($condition, $body)
+    };
+}
+
+#[macro_export]
+macro_rules! match_expression_statement {
+    ($expression:expr) => {
+        ExpressionStatementMatcher::new($expression)
+    };
+    () => {
+        ExpressionStatementMatcher::new(AnyMatcher::new())
     };
 }
 

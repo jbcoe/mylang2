@@ -232,11 +232,6 @@ impl<'a> Parser<'a> {
 
         let right = Box::new(self.parse_identifier_expression(start)?);
 
-        if self.token().kind() != Kind::Semicolon {
-            self.reset(start);
-            return Err(format!("Expected a semicolon, got {:?}", self.token()));
-        }
-
         Ok(Expression::BinaryExpression(BinaryExpression {
             operator,
             left,
@@ -303,6 +298,7 @@ impl<'a> Parser<'a> {
     fn parse_statement(&mut self) -> Result<Statement<'a>, String> {
         let token = self.token();
         match token.kind() {
+            Kind::If => self.parse_if_statement(),
             Kind::Return => self.parse_return_statement(),
             Kind::Let => self.parse_let_stmt(),
             Kind::Fn => self.parse_function_definition(),
@@ -311,6 +307,22 @@ impl<'a> Parser<'a> {
                 Err(_) => Err(format!("Failed to parse statement {:?}", token)),
             },
         }
+    }
+
+    fn parse_if_statement(&mut self) -> Result<Statement<'a>, String> {
+        let start = self.position;
+        self.consume(Kind::If, start)?;
+        let condition = self.parse_expression()?;
+        self.consume(Kind::LeftBrace, start)?;
+        let mut body = vec![];
+        while self.token().kind() != Kind::RightBrace {
+            body.push(self.parse_statement()?);
+        }
+        self.consume(Kind::RightBrace, start)?;
+        Ok(ast::Statement::If(ast::IfStatement {
+            condition: Box::new(condition),
+            body,
+        }))
     }
 
     // Parses a program from tokens.
@@ -541,7 +553,7 @@ mod tests {
                     Ok(program) => {
                         for (statement, matcher) in program.statements.iter().zip(matchers.iter())
                         {
-                            assert!(matcher.matches(statement),
+                            assert!(StatementMatcher::matches(&**matcher, statement),
                                     "Matcher failed to match expression {:?}", statement);
                         }
                     }
@@ -668,5 +680,19 @@ mod tests {
         parse_return_boolean_expression,
         "return true xor false;",
         match_return_statement!(match_any!())
+    }
+
+    parse_statement_test! {
+        parse_if_statement,
+        "if x < 0 { foo(x); }",
+        match_if_statement!(
+            match_binary_expression!(
+                match_identifier!("x"),
+                ast::BinaryOperator::Less,
+                match_integer_literal!("0")),
+            vec![
+                match_expression_statement!(match_function_call!("foo", vec![match_identifier!("x")]))
+            ]
+        )
     }
 }

@@ -1,5 +1,6 @@
 #[derive(Debug)]
 pub enum Statement<'a> {
+    If(IfStatement<'a>),
     Let(LetStatement<'a>),
     FunctionDeclaration(FunctionDeclaration<'a>),
     Expression(Expression<'a>),
@@ -95,6 +96,12 @@ pub struct LetStatement<'a> {
 #[derive(Debug)]
 pub struct ReturnStatement<'a> {
     pub expression: Box<Expression<'a>>,
+}
+
+#[derive(Debug)]
+pub struct IfStatement<'a> {
+    pub condition: Box<Expression<'a>>,
+    pub body: Vec<Statement<'a>>,
 }
 
 #[derive(Debug)]
