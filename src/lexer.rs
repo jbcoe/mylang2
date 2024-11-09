@@ -332,6 +332,7 @@ impl<'a> Lexer<'a> {
         tokens
     }
 }
+
 // Returns the 1-based line number of the given Token.
 pub fn get_line(token: &Token) -> usize {
     assert!(token.kind() != Kind::EndOfFile);

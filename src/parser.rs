@@ -79,20 +79,28 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expression_statement(&mut self) -> Result<Statement<'a>, String> {
-        let start = self.position;
+    fn parse_expression(&mut self) -> Result<Expression<'a>, String> {
+        let start: usize = self.position;
         if let Ok(expression) = self.parse_function_call(start) {
-            self.consume(Kind::Semicolon, start)?;
-            return Ok(ast::Statement::Expression(expression));
+            return Ok(expression);
         }
         if let Ok(expression) = self.parse_binary_expression(start) {
-            self.consume(Kind::Semicolon, start)?;
-            return Ok(ast::Statement::Expression(expression));
+            return Ok(expression);
         }
         if let Ok(expression) = self.parse_identifier_expression(start) {
+            return Ok(expression);
+        }
+        self.reset(start);
+        Err("Failed to parse expression".to_string())
+    }
+
+    fn parse_expression_statement(&mut self) -> Result<Statement<'a>, String> {
+        let start = self.position;
+        if let Ok(expression) = self.parse_expression() {
             self.consume(Kind::Semicolon, start)?;
             return Ok(ast::Statement::Expression(expression));
         }
+        self.reset(start);
         Err("Failed to parse expression statement".to_string())
     }
 
@@ -192,7 +200,7 @@ impl<'a> Parser<'a> {
     fn parse_return_statement(&mut self) -> Result<Statement<'a>, String> {
         let start = self.position;
         self.consume(Kind::Return, start)?;
-        let expression = Box::new(self.parse_identifier_expression(start)?);
+        let expression = Box::new(self.parse_expression()?);
         self.consume(Kind::Semicolon, start)?;
         Ok(ast::Statement::Return(ast::ReturnStatement { expression }))
     }
@@ -635,5 +643,21 @@ mod tests {
         "return 5.0;",
         match_return_statement!(
             match_float_literal!("5.0"))
+    }
+
+    parse_statement_test! {
+        parse_return_integer_expression,
+        "return 2 + 2;",
+        match_return_statement!(
+            match_binary_expression!(
+                match_integer_literal!(2),
+                ast::BinaryOperator::Plus,
+                match_integer_literal!(2)))
+    }
+
+    parse_statement_test! {
+        parse_return_boolean_expression,
+        "return true xor false;",
+        match_return_statement!(match_any!())
     }
 }
