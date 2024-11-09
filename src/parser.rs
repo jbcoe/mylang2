@@ -415,7 +415,7 @@ mod tests {
                         for (statement, matcher) in program.statements.iter().zip(matchers.iter())
                         {
                             if let ast::Statement::Expression(expr) = statement {
-                                assert!(matcher.matches(expr),
+                                assert!(ExpressionMatcher::matches(&**matcher, expr),
                                         "Matcher failed to match expression {:?}", expr);
                             } else {
                                 panic!("Expected an expression statement");
@@ -691,7 +691,7 @@ mod tests {
                 ast::BinaryOperator::Less,
                 match_integer_literal!("0")),
             vec![
-                match_expression_statement!(match_function_call!("foo", vec![match_identifier!("x")]))
+                match_function_call!("foo", vec![match_identifier!("x")])
             ]
         )
     }

@@ -10,6 +10,14 @@ pub trait ExpressionMatcher {
     fn matches(&self, expression: &Expression) -> bool;
 }
 
+pub trait ExpressionStatementMatcher {}
+
+impl<T: ExpressionMatcher + ExpressionStatementMatcher> StatementMatcher for T {
+    fn matches(&self, statement: &Statement) -> bool {
+        matches!(statement, Statement::Expression(expression) if self.matches(expression))
+    }
+}
+
 pub trait ParameterMatcher {
     fn matches(&self, parameter: &Parameter) -> bool;
 }
@@ -150,22 +158,6 @@ impl StatementMatcher for FunctionDeclarationMatcher {
     }
 }
 
-pub struct ExpressionStatementMatcher {
-    expression: Box<dyn ExpressionMatcher>,
-}
-
-impl ExpressionStatementMatcher {
-    pub fn new(expression: Box<dyn ExpressionMatcher>) -> Box<ExpressionStatementMatcher> {
-        Box::new(ExpressionStatementMatcher { expression })
-    }
-}
-
-impl StatementMatcher for ExpressionStatementMatcher {
-    fn matches(&self, statement: &Statement) -> bool {
-        matches!(statement, Statement::Expression(expression) if self.expression.matches(expression))
-    }
-}
-
 pub struct FunctionCallMatcher {
     identifier: String,
     arguments: Vec<Box<dyn ExpressionMatcher>>,
@@ -192,6 +184,8 @@ impl ExpressionMatcher for FunctionCallMatcher {
         })
     }
 }
+
+impl ExpressionStatementMatcher for FunctionCallMatcher {}
 
 pub struct IfStatementMatcher {
     condition: Box<dyn ExpressionMatcher>,
@@ -249,6 +243,8 @@ impl ExpressionMatcher for IdentifierMatcher {
     }
 }
 
+impl ExpressionStatementMatcher for IdentifierMatcher {}
+
 pub struct AnyIdentifierMatcher {
     _private: (),
 }
@@ -264,6 +260,8 @@ impl ExpressionMatcher for AnyIdentifierMatcher {
         matches!(expression, Expression::Identifier(_))
     }
 }
+
+impl ExpressionStatementMatcher for AnyIdentifierMatcher {}
 
 pub struct IntegerLiteralMatcher {
     identifier: String,
@@ -281,6 +279,8 @@ impl ExpressionMatcher for IntegerLiteralMatcher {
     }
 }
 
+impl ExpressionStatementMatcher for IntegerLiteralMatcher {}
+
 pub struct AnyIntegerLiteralMatcher {
     _private: (),
 }
@@ -296,6 +296,8 @@ impl ExpressionMatcher for AnyIntegerLiteralMatcher {
         matches!(expression, Expression::IntegerLiteral(_))
     }
 }
+
+impl ExpressionStatementMatcher for AnyIntegerLiteralMatcher {}
 
 pub struct FloatLiteralMatcher {
     identifier: String,
@@ -313,6 +315,8 @@ impl ExpressionMatcher for FloatLiteralMatcher {
     }
 }
 
+impl ExpressionStatementMatcher for FloatLiteralMatcher {}
+
 pub struct AnyFloatLiteralMatcher {
     _private: (),
 }
@@ -328,6 +332,8 @@ impl ExpressionMatcher for AnyFloatLiteralMatcher {
         matches!(expression, Expression::FloatLiteral(_))
     }
 }
+
+impl ExpressionStatementMatcher for AnyFloatLiteralMatcher {}
 
 pub struct BooleanLiteralMatcher {
     value: bool,
@@ -345,6 +351,8 @@ impl ExpressionMatcher for BooleanLiteralMatcher {
     }
 }
 
+impl ExpressionStatementMatcher for BooleanLiteralMatcher {}
+
 pub struct AnyBooleanLiteralMatcher {
     _private: (),
 }
@@ -360,6 +368,8 @@ impl ExpressionMatcher for AnyBooleanLiteralMatcher {
         matches!(expression, Expression::BooleanLiteral(_))
     }
 }
+
+impl ExpressionStatementMatcher for AnyBooleanLiteralMatcher {}
 
 pub struct BinaryExpressionMatcher {
     left: Box<dyn ExpressionMatcher>,
@@ -390,6 +400,8 @@ impl ExpressionMatcher for BinaryExpressionMatcher {
         })
     }
 }
+
+impl ExpressionStatementMatcher for BinaryExpressionMatcher {}
 
 pub struct AnyBinaryExpressionMatcher {}
 
@@ -536,16 +548,6 @@ macro_rules! match_if_statement {
     };
 }
 
-#[macro_export]
-macro_rules! match_expression_statement {
-    ($expression:expr) => {
-        ExpressionStatementMatcher::new($expression)
-    };
-    () => {
-        ExpressionStatementMatcher::new(AnyMatcher::new())
-    };
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -572,7 +574,7 @@ mod tests {
 
     #[test]
     fn test_named_identifier_matcher() {
-        let matcher = IdentifierMatcher::new("x".to_string());
+        let matcher: Box<dyn ExpressionMatcher> = IdentifierMatcher::new("x".to_string());
         assert!(matcher.matches(&identifier_expr("x")));
         assert!(!matcher.matches(&identifier_expr("y")));
     }
@@ -717,21 +719,21 @@ mod tests {
 
     #[test]
     fn test_integer_literal_matcher() {
-        let matcher = IntegerLiteralMatcher::new("42".to_string());
+        let matcher: Box<dyn ExpressionMatcher> = IntegerLiteralMatcher::new("42".to_string());
         assert!(matcher.matches(&integer_literal_expr("42")));
         assert!(!matcher.matches(&integer_literal_expr("43")));
     }
 
     #[test]
     fn test_float_literal_matcher() {
-        let matcher = FloatLiteralMatcher::new("42.0".to_string());
+        let matcher: Box<dyn ExpressionMatcher> = FloatLiteralMatcher::new("42.0".to_string());
         assert!(matcher.matches(&float_literal_expr("42.0")));
         assert!(!matcher.matches(&float_literal_expr("43.0")));
     }
 
     #[test]
     fn test_binary_expression_matcher() {
-        let matcher = BinaryExpressionMatcher::new(
+        let matcher: Box<dyn ExpressionMatcher> = BinaryExpressionMatcher::new(
             IntegerLiteralMatcher::new("2".to_string()),
             BinaryOperator::Plus,
             IntegerLiteralMatcher::new("2".to_string()),
@@ -786,7 +788,7 @@ mod tests {
 
     #[test]
     fn test_function_call_matcher() {
-        let matcher = FunctionCallMatcher::new(
+        let matcher: Box<dyn ExpressionMatcher> = FunctionCallMatcher::new(
             "f".to_string(),
             vec![IntegerLiteralMatcher::new("42".to_string())],
         );
@@ -813,9 +815,7 @@ mod tests {
     fn test_if_statement_matcher() {
         let matcher = IfStatementMatcher::new(
             BooleanLiteralMatcher::new(true),
-            vec![ExpressionStatementMatcher::new(IntegerLiteralMatcher::new(
-                "42".to_string(),
-            ))],
+            vec![IntegerLiteralMatcher::new("42".to_string())],
         );
 
         assert!(matcher.matches(&Statement::If(IfStatement {
