@@ -808,4 +808,39 @@ mod tests {
         })));
         assert!(!matcher.matches(&integer_literal_expr("42")));
     }
+
+    #[test]
+    fn test_if_statement_matcher() {
+        let matcher = IfStatementMatcher::new(
+            BooleanLiteralMatcher::new(true),
+            vec![ExpressionStatementMatcher::new(IntegerLiteralMatcher::new(
+                "42".to_string(),
+            ))],
+        );
+
+        assert!(matcher.matches(&Statement::If(IfStatement {
+            condition: Box::new(Expression::BooleanLiteral(BooleanLiteral { value: true })),
+            body: vec![Statement::Expression(Expression::IntegerLiteral(
+                IntegerLiteral { text: "42" }
+            ))]
+        })));
+
+        assert!(!matcher.matches(&Statement::If(IfStatement {
+            condition: Box::new(Expression::BooleanLiteral(BooleanLiteral { value: false })),
+            body: vec![Statement::Expression(Expression::IntegerLiteral(
+                IntegerLiteral { text: "42" }
+            ))]
+        })));
+
+        assert!(!matcher.matches(&Statement::If(IfStatement {
+            condition: Box::new(Expression::BooleanLiteral(BooleanLiteral { value: true })),
+            body: vec![]
+        })));
+
+        assert!(
+            !matcher.matches(&Statement::Expression(Expression::IntegerLiteral(
+                IntegerLiteral { text: "42" }
+            )))
+        );
+    }
 }
